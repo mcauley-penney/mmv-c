@@ -35,7 +35,7 @@ void destroy_path(char *path)
 
 void open_file(char *path, char *mode, FILE **fptr)
 {
-    *fptr = malloc(sizeof(FILE));
+    *fptr = malloc(sizeof(fptr));
     *fptr = fopen(path, mode);
 
     if (fptr == NULL)
@@ -47,11 +47,12 @@ void open_file(char *path, char *mode, FILE **fptr)
 
 void open_file_in_buf(const char *path, const int path_len)
 {
-    char *editor_cmd = "$EDITOR";
+    char *editor_cmd = "$EDITOR ";
     int edit_cmd_len = strlen(editor_cmd) + path_len + 1;
-    char *edit_cmd = malloc(edit_cmd_len * sizeof(char));
+    char *edit_cmd = malloc(edit_cmd_len * sizeof(edit_cmd));
 
-    sprintf(edit_cmd, "%s %s", editor_cmd, path);
+    strcpy(edit_cmd, editor_cmd);
+    strcat(edit_cmd, path);
 
     // open temporary file containing argv using editor of choice
     system(edit_cmd);
@@ -73,7 +74,7 @@ char *mk_uniq_path(const char *prefix, const char *ext, int *path_len)
 
     *path_len = strlen(prefix) + strlen(ext) + suffix_prec + 1;
 
-    path = malloc(*path_len * sizeof(char));
+    path = malloc(*path_len * sizeof(path));
     sprintf(path, "%s%d%s", prefix, suffix, ext);
 
     return path;
