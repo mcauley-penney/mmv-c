@@ -39,8 +39,10 @@ void open_file(char *path, char *mode, FILE **fptr)
     *fptr = fopen(path, mode);
 
     if (fptr == NULL)
-        // TODO: create error msg
+    {
+        printf("ERROR: Unable to open \"%s\" in \"%s\" mode\n", path, mode);
         exit(EXIT_FAILURE);
+    }
 }
 
 void open_file_in_buf(const char *path, const int path_len)
@@ -87,19 +89,14 @@ void rm_strarr_index(char *strarr[], int *arr_len, int index)
 
 void write_strarr_to_file(char *path, char *args[], const int arg_count)
 {
-    FILE *fptr = NULL;
+    FILE *fptr = malloc(sizeof(FILE));
     int i;
 
-    // open_file(path, "w", fptr);
-
-    fptr = fopen(path, "w");
-
-    if (fptr == NULL)
-        // TODO: create error msg
-        exit(EXIT_FAILURE);
+    open_file(path, "w", &fptr);
 
     for (i = 0; i < arg_count; i++)
         fprintf(fptr, "%s", args[arg_count]);
 
     fclose(fptr);
+    free(fptr);
 }
