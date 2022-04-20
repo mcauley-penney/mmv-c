@@ -35,6 +35,7 @@ void destroy_path(char *path)
 
 void open_file(char *path, char *mode, FILE **fptr)
 {
+    *fptr = malloc(sizeof(FILE));
     *fptr = fopen(path, mode);
 
     if (fptr == NULL)
@@ -46,8 +47,9 @@ void open_file(char *path, char *mode, FILE **fptr)
 
 void open_file_in_buf(const char *path, const int path_len)
 {
-    char *editor_cmd = "$EDITOR ";
-    char *edit_cmd = (char *)malloc(strlen(editor_cmd) + path_len + 1);
+    char *editor_cmd = "$EDITOR";
+    int edit_cmd_len = strlen(editor_cmd) + path_len + 1;
+    char *edit_cmd = malloc(edit_cmd_len * sizeof(char));
 
     sprintf(edit_cmd, "%s %s", editor_cmd, path);
 
@@ -71,7 +73,7 @@ char *mk_uniq_path(const char *prefix, const char *ext, int *path_len)
 
     *path_len = strlen(prefix) + strlen(ext) + suffix_prec + 1;
 
-    path = (char *)malloc(*path_len);
+    path = malloc(*path_len * sizeof(char));
     sprintf(path, "%s%d%s", prefix, suffix, ext);
 
     return path;
@@ -89,7 +91,7 @@ void rm_strarr_index(char *strarr[], int *arr_len, int index)
 
 void write_strarr_to_file(char *path, char *args[], const int arg_count)
 {
-    FILE *fptr = malloc(sizeof(FILE));
+    FILE *fptr = NULL;
     int i;
 
     open_file(path, "w", &fptr);
@@ -98,5 +100,4 @@ void write_strarr_to_file(char *path, char *args[], const int arg_count)
         fprintf(fptr, "%s", args[arg_count]);
 
     fclose(fptr);
-    free(fptr);
 }
