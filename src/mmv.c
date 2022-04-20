@@ -2,7 +2,6 @@
 
 int main(int argc, char *argv[])
 {
-    // create temp file
     char *tmp_path = NULL;
     int tmp_path_len;
 
@@ -50,10 +49,9 @@ void open_file_in_buf(const char *path, const int path_len)
     char *editor_cmd = "$EDITOR ";
     char *edit_cmd = (char *)malloc(strlen(editor_cmd) + path_len + 1);
 
-    // concat temporary path onto editor command
     sprintf(edit_cmd, "%s %s", editor_cmd, path);
 
-    // execute editor command
+    // open temporary file containing argv using editor of choice
     system(edit_cmd);
 
     free(edit_cmd);
@@ -67,6 +65,8 @@ char *mk_uniq_path(const char *prefix, const char *ext, int *path_len)
     srand(time(0));
 
     suffix = rand() % mod;
+
+    // get "len" of randomized digit suffix for mem allocation
     suffix_prec = floor(log10(suffix)) + 1;
 
     *path_len = strlen(prefix) + strlen(ext) + suffix_prec + 1;
