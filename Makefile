@@ -6,7 +6,7 @@ VPATH = $(src_dir) # where to look for src files
 
 warn = -Wall -Wextra -Wfloat-equal -Wformat=2 -pedantic-errors # warning switches
 CFLAGS = $(warn) -c # compile flags
-LFLAGS = $(warn) -lm  # linking flags
+LFLAGS = $(warn)  # linking flags
 
 
 # object file names

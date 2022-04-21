@@ -1,9 +1,7 @@
 #include <ctype.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 void rm_path(char *path);
 void free_strarr(char *strarr[], const int arg_count);
