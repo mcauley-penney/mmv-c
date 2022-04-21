@@ -7,26 +7,35 @@
 
 int main(int argc, char *argv[])
 {
-    char *tmp_path = NULL;
-    int tmp_path_len;
+    char tmp_path[] = "/tmp/mmv_XXXXXX";
+    FILE *tmp_fptr;
+    size_t tmp_path_len = strlen(tmp_path);
 
     // remove program invocation from argv and decrement argc
     rm_strarr_index(argv, &argc, 0);
-
-    char *new_name_arr[argc];
 
     // TODO: remove duplicate inputs
     //  - start with str comparison
     //  - advance to some higher form, like hashing
 
-    tmp_path = mk_uniq_path("/tmp/mmv_", ".txt", &tmp_path_len);
+    tmp_fptr = mk_uniq_path(tmp_path);
 
-    write_strarr_to_file(tmp_path, argv, argc);
+    write_strarr_to_fptr(tmp_fptr, argv, argc);
+
+    // there is no corresponding, explicit fopen() call for this fclose()
+    // because mkstemp in mk_uniq_path() opens tmp file for us
+    fclose(tmp_fptr);
 
     open_file_in_buf(tmp_path, tmp_path_len);
 
+    char *new_name_arr[argc];
+
+    open_file(tmp_path, "r", &tmp_fptr);
+
     // TODO: digest newlines in temp buffer
-    read_strarr_from_file(tmp_path, tmp_path_len, new_name_arr);
+    read_strarr_from_fptr(tmp_fptr, argc, new_name_arr);
+
+    fclose(tmp_fptr);
 
     /**
      * TODO: add protections
@@ -42,22 +51,18 @@ int main(int argc, char *argv[])
 
     rename_files(argv, new_name_arr, argc);
 
-    destroy_path(tmp_path);
+    rm_path(tmp_path);
     free_strarr(new_name_arr, argc);
 
     return EXIT_SUCCESS;
 }
 
-void destroy_path(char *path)
+void rm_path(char *path)
 {
-    int rm_success;
-
-    rm_success = remove(path);
+    int rm_success = remove(path);
 
     if (rm_success == -1)
         printf("ERROR: Unable to delete \"%s\"\n", path);
-
-    free(path);
 }
 
 void free_strarr(char *strarr[], const int arg_count)
@@ -70,7 +75,6 @@ void free_strarr(char *strarr[], const int arg_count)
 
 void open_file(char *path, char *mode, FILE **fptr)
 {
-    *fptr = malloc(sizeof(fptr));
     *fptr = fopen(path, mode);
 
     if (fptr == NULL)
@@ -80,7 +84,7 @@ void open_file(char *path, char *mode, FILE **fptr)
     }
 }
 
-void open_file_in_buf(const char *path, const int path_len)
+void open_file_in_buf(const char *path, const size_t path_len)
 {
     char *editor_cmd = "$EDITOR ";
     int edit_cmd_len = strlen(editor_cmd) + path_len + 1;
@@ -95,34 +99,29 @@ void open_file_in_buf(const char *path, const int path_len)
     free(edit_cmd);
 }
 
-char *mk_uniq_path(const char *prefix, const char *ext, int *path_len)
+FILE *mk_uniq_path(char *tmp_path)
 {
-    int mod = 100000, suffix, suffix_prec;
-    char *path = NULL;
+    FILE *fptr;
+    int tmp_fd;
 
-    srand(time(0));
+    tmp_fd = mkstemp(tmp_path);
 
-    suffix = rand() % mod;
+    if (tmp_fd == -1)
+    {
+        printf("ERROR: unable to open \"%s\"\n", tmp_path);
+        exit(EXIT_FAILURE);
+    }
 
-    // get "len" of randomized digit suffix for mem allocation
-    suffix_prec = floor(log10(suffix)) + 1;
+    fptr = fdopen(tmp_fd, "w");
 
-    *path_len = strlen(prefix) + strlen(ext) + suffix_prec + 1;
-
-    path = malloc(*path_len * sizeof(path));
-    sprintf(path, "%s%d%s", prefix, suffix, ext);
-
-    return path;
+    return fptr;
 }
 
-void read_strarr_from_file(char *path, const int arg_count, char *strarr[])
+void read_strarr_from_fptr(FILE *fptr, const int arg_count, char *strarr[])
 {
     const int max_str_len = 500;
-    char *cur_str = malloc(max_str_len * sizeof(cur_str)), *read_ptr;
-    FILE *fptr = NULL;
+    char *cur_str = malloc(max_str_len * sizeof(cur_str)), *read_ptr = "";
     int i, j = 0;
-
-    open_file(path, "r", &fptr);
 
     for (i = 0; i < arg_count && read_ptr != NULL; i++)
     {
@@ -137,7 +136,6 @@ void read_strarr_from_file(char *path, const int arg_count, char *strarr[])
         }
     }
 
-    fclose(fptr);
     free(cur_str);
 }
 
@@ -179,15 +177,10 @@ void rm_strarr_index(char *strarr[], int *arr_len, int index)
     (*arr_len)--;
 }
 
-void write_strarr_to_file(char *path, char *args[], const int arg_count)
+void write_strarr_to_fptr(FILE *fptr, char *args[], const int arg_count)
 {
-    FILE *fptr = NULL;
     int i;
-
-    open_file(path, "w", &fptr);
 
     for (i = 0; i < arg_count; i++)
         fprintf(fptr, "%s\n", args[i]);
-
-    fclose(fptr);
 }
