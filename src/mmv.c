@@ -1,6 +1,7 @@
 /**
  * TODO:
  * 1. produce documentation
+ * 2. determine what datatype to use for numerical values here
  */
 
 #include "mmv.h"
@@ -9,7 +10,7 @@ int main(int argc, char *argv[])
 {
     char tmp_path[] = "/tmp/mmv_XXXXXX";
     FILE *tmp_fptr;
-    size_t tmp_path_len = strlen(tmp_path);
+    int tmp_path_len = strlen(tmp_path);
 
     // remove program invocation from argv and decrement argc
     rm_strarr_index(argv, &argc, 0);
@@ -18,7 +19,7 @@ int main(int argc, char *argv[])
     //  - start with str comparison
     //  - advance to some higher form, like hashing
 
-    tmp_fptr = mk_uniq_path(tmp_path);
+    tmp_fptr = get_tmp_path_fptr(tmp_path);
 
     write_strarr_to_fptr(tmp_fptr, argv, argc);
 
@@ -84,7 +85,7 @@ void open_file(char *path, char *mode, FILE **fptr)
     }
 }
 
-void open_file_in_buf(const char *path, const size_t path_len)
+void open_file_in_buf(const char *path, const int path_len)
 {
     char *editor_cmd = "$EDITOR ";
     int edit_cmd_len = strlen(editor_cmd) + path_len + 1;
@@ -99,7 +100,7 @@ void open_file_in_buf(const char *path, const size_t path_len)
     free(edit_cmd);
 }
 
-FILE *mk_uniq_path(char *tmp_path)
+FILE *get_tmp_path_fptr(char *tmp_path)
 {
     FILE *fptr;
     int tmp_fd;
@@ -108,11 +109,17 @@ FILE *mk_uniq_path(char *tmp_path)
 
     if (tmp_fd == -1)
     {
-        printf("ERROR: unable to open \"%s\"\n", tmp_path);
+        printf("ERROR: unable to open \"%s\" as file descriptor\n", tmp_path);
         exit(EXIT_FAILURE);
     }
 
     fptr = fdopen(tmp_fd, "w");
+
+    if (fptr == NULL)
+    {
+        printf("ERROR: unable to open \"%s\" as file pointer\n", tmp_path);
+        exit(EXIT_FAILURE);
+    }
 
     return fptr;
 }
@@ -139,7 +146,6 @@ void read_strarr_from_fptr(FILE *fptr, const int arg_count, char *strarr[])
     free(cur_str);
 }
 
-// TODO:
 void rename_files(char *old_nm_arr[], char *new_nm_arr[], const int arg_count)
 {
     int i, rename_result;
