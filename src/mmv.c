@@ -133,22 +133,23 @@ FILE *get_tmp_path_fptr(char *tmp_path)
     return fptr;
 }
 
-void read_strarr_from_fptr(FILE *fptr, const int arg_count, char *strarr[])
+void read_strarr_from_fptr(FILE *fptr, char *strarr[], const int arg_count)
 {
     const int max_str_len = 500;
     char *cur_str = malloc(max_str_len * sizeof(cur_str)), *read_ptr = "";
-    int i, j = 0;
+    int i = 0, j = 0;
 
-    for (i = 0; i < arg_count && read_ptr != NULL; i++)
+    while (i < arg_count && read_ptr != NULL)
     {
         read_ptr = fgets(cur_str, max_str_len, fptr);
 
-        if (read_ptr != NULL)
+        if (read_ptr != NULL && strcmp("\n", cur_str) != 0)
         {
             strarr[j] = malloc(max_str_len * sizeof(strarr[j]));
             rm_str_nl(cur_str);
             strcpy(strarr[j], cur_str);
             j++;
+            i++;
         }
     }
 
