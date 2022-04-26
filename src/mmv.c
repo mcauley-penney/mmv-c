@@ -72,7 +72,7 @@ void rm_path(char *path)
     int rm_success = remove(path);
 
     if (rm_success == -1)
-        printf("ERROR: Unable to delete \"%s\"\n", path);
+        fprintf(stderr, "ERROR: Unable to delete \"%s\"\n", path);
 }
 
 void free_strarr(char *strarr[], const int arg_count)
@@ -89,7 +89,7 @@ void open_file(char *path, char *mode, FILE **fptr)
 
     if (fptr == NULL)
     {
-        printf("ERROR: Unable to open \"%s\" in \"%s\" mode\n", path, mode);
+        fprintf(stderr, "ERROR: Unable to open \"%s\" in \"%s\" mode\n", path, mode);
         exit(EXIT_FAILURE);
     }
 }
@@ -118,7 +118,7 @@ FILE *get_tmp_path_fptr(char *tmp_path)
 
     if (tmp_fd == -1)
     {
-        printf("ERROR: unable to open \"%s\" as file descriptor\n", tmp_path);
+        fprintf(stderr, "ERROR: unable to open \"%s\" as file descriptor\n", tmp_path);
         exit(EXIT_FAILURE);
     }
 
@@ -126,7 +126,7 @@ FILE *get_tmp_path_fptr(char *tmp_path)
 
     if (fptr == NULL)
     {
-        printf("ERROR: unable to open \"%s\" as file pointer\n", tmp_path);
+        fprintf(stderr, "ERROR: unable to open \"%s\" as file pointer\n", tmp_path);
         exit(EXIT_FAILURE);
     }
 
@@ -167,7 +167,7 @@ void rename_files(char *old_nm_arr[], char *new_nm_arr[], const int arg_count)
         rename_result = rename(old_nm, new_nm);
 
         if (rename_result == -1)
-            printf("ERROR: Could not rename \"%s\" to \"%s\"", old_nm, new_nm);
+            fprintf(stderr, "ERROR: Could not rename \"%s\" to \"%s\"", old_nm_arr[i], new_nm_arr[i]);
     }
 }
 
