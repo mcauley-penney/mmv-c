@@ -15,9 +15,8 @@ int main(int argc, char *argv[])
     // remove program invocation from argv and decrement argc
     rm_strarr_index(argv, &argc, 0);
 
-    // TODO: remove duplicate inputs
-    //  - start with str comparison
-    //  - advance to some higher form, like hashing
+    if (argc > 1)
+        rm_strarr_dupes(argv, argc);
 
     tmp_fptr = get_tmp_path_fptr(tmp_path);
 
@@ -56,6 +55,16 @@ int main(int argc, char *argv[])
     free_strarr(new_name_arr, argc);
 
     return EXIT_SUCCESS;
+}
+
+void rm_strarr_dupes(char *strarr[], int arr_len)
+{
+    int i, j;
+
+    for (i = 0; i < arr_len; i++)
+        for (j = i + 1; j < arr_len; j++)
+            if (strcmp(strarr[j], strarr[i]) == 0)
+                strcpy(strarr[j], "");
 }
 
 void rm_path(char *path)
@@ -188,5 +197,16 @@ void write_strarr_to_fptr(FILE *fptr, char *args[], const int arg_count)
     int i;
 
     for (i = 0; i < arg_count; i++)
-        fprintf(fptr, "%s\n", args[i]);
+        if (strlen(args[i]) > 0)
+            fprintf(fptr, "%s\n", args[i]);
+}
+
+void print_strarr(char *strarr[], const int arr_len)
+{
+    int i;
+
+    for (i = 0; i < arr_len; i++)
+        printf("index %d: %s\n", i, strarr[i]);
+
+    printf("\n");
 }
