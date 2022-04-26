@@ -162,10 +162,7 @@ void rename_files(char *old_nm_arr[], char *new_nm_arr[], const int arg_count)
 
     for (i = 0; i < arg_count; i++)
     {
-        char *old_nm = old_nm_arr[i];
-        char *new_nm = new_nm_arr[i];
-
-        rename_result = rename(old_nm, new_nm);
+        rename_result = rename(old_nm_arr[i], new_nm_arr[i]);
 
         if (rename_result == -1)
             fprintf(stderr, "ERROR: Could not rename \"%s\" to \"%s\"", old_nm_arr[i], new_nm_arr[i]);
