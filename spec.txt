@@ -1,0 +1,76 @@
+What do we need:
+    - cyclically rename
+        - if cycle is detected, where the hash of a val returns a key, e.g.
+
+            file1.txt ──► file2.txt
+            hash(file2.txt) != NULL
+
+          we must rename file2.txt, then file1.txt
+
+    - deny rename if item exists and there is no cycle
+
+
+What do we need to do:
+
+        Idea 2: Hashmaps
+            We iterate over argv and, as we do, we produce a hash of the current string and attempt insertion into an array at the hash index. If the position is occupied, we check if the item at that position is the same. If not, we iterate to next index and check again. We do this until we either see that the string is already in the array or we have reached an empty index. If a matching string is found, reject. If not, insert. This produces a map where the hash of the old name is the index and the item at the index is the old name that made the hash index. We then store the hash in an int array, allowing us to have "positions" that we will use to relate the new names to the old names. An example might be:
+
+                    cur_str = argv[i]
+                    cur_str_hash = hash(cur_str)
+                    map[cur_str_hash] = cur_str
+                    key_array[i] = cur_str_hash
+
+                This
+                    1. gets the string at the current position of argv
+                        - This positional relationship must be maintained
+                    2. hashes the current string
+                    3. inserts the current string at it's own hash in the string map
+                    4. inserts the hash (the key to the old string in the map) into an array of int keys at the current position in argv.
+                        - This allows us to iterate over the keys and know which is first, so that we can map the first item returned from the temp buffer to the first item given in argv
+
+    2. do not remove non-unique items in new names
+        - allow rename to fail when items would be overwritten
+            - safe
+
+    3. resolve cycles
+        - scenarios:
+            0. we want to rename file1.txt to file2.txt and file2.txt to file3.txt
+            1. we want to rename file1.txt to file2.txt and vice versa
+                - using a map, we can check if each new name has a file in the hashmap
+
+                        new_name_hash = hash(new_name)
+                        if map[new_name_hash] != NULL
+
+
+
+
+                    f1.txt ─► f2.txt                         f1.txt ─► f2.txt
+                    f2.txt ─► f3.txt                         f2.txt ─► f3.txt
+                                                             f3.txt ─► f1.txt
+                    - check to see if file2 in map
+                    - if yes, rename file2                   - check to see if f2 in map
+                                                             - do temp rename
+                    f1.txt ─► f2.txt
+                    tmp.txt ─► f3.txt                        f1.txt ─► f2.txt
+                           │                                 tmp.txt ─► f3.txt
+                           ▼                                 f3.txt ─► f1.txt
+                    f2.txt                                           │
+                    tmp.txt ─► f3.txt                                ▼
+                           │                                 f2.txt
+                           ▼                                 tmp.txt ─► f3.txt
+                    f2.txt                                   f3.txt ─► f1.txt
+                    f3.txt
+                                                                and so on
+
+
+                1. attempt f1.txt ─► f2.txt
+                2. rename fails because f2.txt exists
+                3. check if it is cycle
+                    - how:
+                        1. hash f2 and see if it is at index
+                        2. if not, iterate until NULL/empty space or end of array (or linked list for chaining)
+                4. it exists in array:
+                    - rename to new temp name
+                    - hash temp name
+                    - insert {temp name hash: temp name} into map
+                    - overwrite old position in key array with new key
