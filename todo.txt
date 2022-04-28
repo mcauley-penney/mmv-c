@@ -1,2 +1,0 @@
-1. consider a faster, smaller fn than printf
-2. produce documentation

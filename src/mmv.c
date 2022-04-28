@@ -1,86 +1,191 @@
 /**
  * TODO:
- * 1. produce documentation
- * 2. determine what datatype to use for numerical values here
+ * 1. replace unsafe functions with safe ones
+ * 2. produce documentation
+ * 3. determine what datatype to use for numerical values here
+ * 4. make param names uniform, e.g. arg_count vs arr_len, etc.
+ * 5. enforce C naming conventions
+ * 7. group functions in main into parent functions after done
+ * 8. alphabetize fns and remove unused defs
  */
 
 #include "mmv.h"
+#include <time.h>
 
 int main(int argc, char *argv[])
 {
+
+    // ------------------------------------------------------------------------
+#ifdef TESTING
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
+#endif
+    // ------------------------------------------------------------------------
+
+    // use variable (instead of, maybe, macro) because this string will be
+    // modified in place and reused
     char tmp_path[] = "/tmp/mmv_XXXXXX";
+    const int tmp_path_len = strlen(tmp_path);
     FILE *tmp_fptr;
-    int tmp_path_len = strlen(tmp_path);
+    int hash, i, insert_key, keyarr[argc], keyarr_len = 0, map_size = (6 * argc) + 1;
+    pair *map[map_size];
 
-    // remove program invocation from argv and decrement argc
-    rm_strarr_index(argv, &argc, 0);
+    for (i = 0; i < map_size; i++)
+        map[i] = NULL;
 
-    if (argc > 1)
-        rm_strarr_dupes(argv, argc);
+    for (i = 1; i < argc; i++)
+    {
+        hash = fnv_32a_str(argv[i]) % map_size;
+
+        insert_key = hashmap_insert(map, argv[i], hash);
+
+        if (insert_key == 1)
+        {
+            keyarr[keyarr_len] = hash;
+            keyarr_len++;
+        }
+    }
+
+    // ------------------------------------------------------------------------
+#ifdef TESTING
+    print_map(map, keyarr, keyarr_len);
+#endif
+    // ------------------------------------------------------------------------
 
     tmp_fptr = get_tmp_path_fptr(tmp_path);
-
-    write_strarr_to_fptr(tmp_fptr, argv, argc);
-
-    // there is no corresponding, explicit fopen() call for this fclose()
-    // because mkstemp in mk_uniq_path() opens tmp file for us
+    write_map_to_fptr(tmp_fptr, map, keyarr, keyarr_len);
+    // there is no corresponding explicit fopen() call for this fclose()
+    // because mkstemp in mk_uniq_path() opens temp file for us
     fclose(tmp_fptr);
 
     open_file_in_buf(tmp_path, tmp_path_len);
 
-    char *new_name_arr[argc];
-
     open_file(tmp_path, "r", &tmp_fptr);
-
-    // TODO: digest newlines in temp buffer
-    read_strarr_from_fptr(tmp_fptr, argc, new_name_arr);
-
+    read_lines_from_fptr(tmp_fptr, map, keyarr, keyarr_len);
     fclose(tmp_fptr);
 
-    /**
-     * TODO: add protections
-     *  - disallow duplicate renames
-     *  - allow swapping and cycling names
-     *  - make sure we can handle some common escape chars in names
-     *      - \n
-     *
-     *  - Idea: rename all items to temp names then proceed with rename to
-     *          chosen new name
-     *          - can this be done on a per-filename basis?
-     */
-
-    rename_files(argv, new_name_arr, argc);
+    rename_files(map, keyarr, keyarr_len);
 
     rm_path(tmp_path);
-    free_strarr(new_name_arr, argc);
+    free_map(map, keyarr, keyarr_len);
+
+    // ------------------------------------------------------------------------
+#ifdef TESTING
+    end = clock();
+    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    printf("time: %f\n", cpu_time_used);
+#endif
+    // ------------------------------------------------------------------------
 
     return EXIT_SUCCESS;
 }
 
-void rm_strarr_dupes(char *strarr[], int arr_len)
-{
-    int i, j;
+// ----------------------------------------------------------------------------
 
-    for (i = 0; i < arr_len; i++)
-        for (j = i + 1; j < arr_len; j++)
-            if (strcmp(strarr[j], strarr[i]) == 0)
-                strcpy(strarr[j], "");
+Fnv32_t fnv_32a_str(char *str)
+{
+    Fnv32_t hval = ((Fnv32_t)0x811c9dc5);
+    unsigned char *s = (unsigned char *)str; /* unsigned string */
+
+    // FNV-1a hash each octet in the buffer
+    while (*s)
+    {
+        /* xor the bottom with the current octet */
+        hval ^= (Fnv32_t)*s++;
+
+        /* multiply by the 32 bit FNV magic prime mod 2^32 */
+        hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
+    }
+
+    return hval;
 }
 
-void rm_path(char *path)
-{
-    int rm_success = remove(path);
-
-    if (rm_success == -1)
-        fprintf(stderr, "ERROR: Unable to delete \"%s\"\n", path);
-}
-
-void free_strarr(char *strarr[], const int arg_count)
+void free_map(pair *map[], const int keyarr[], const int keyarr_len)
 {
     int i;
 
-    for (i = 0; i < arg_count; i++)
-        free(strarr[i]);
+    for (i = 0; i < keyarr_len; i++)
+    {
+        pair *wkg_node = map[keyarr[i]];
+
+        free_pair_ll(wkg_node);
+    }
+}
+
+void free_pair_ll(pair *node)
+{
+    if (node != NULL)
+    {
+        free_pair_ll(node->next);
+
+        free(node->dest);
+        free(node->src);
+        free(node);
+
+        node = NULL;
+    }
+}
+
+FILE *get_tmp_path_fptr(char *tmp_path)
+{
+    FILE *fptr;
+    int tmp_fd;
+
+    tmp_fd = mkstemp(tmp_path);
+
+    if (tmp_fd == -1)
+    {
+        fprintf(stderr, "ERROR: unable to open \"%s\" as file descriptor\n", tmp_path);
+        exit(EXIT_FAILURE);
+    }
+
+    fptr = fdopen(tmp_fd, "w");
+
+    if (fptr == NULL)
+    {
+        fprintf(stderr, "ERROR: unable to open \"%s\" as file pointer\n", tmp_path);
+        exit(EXIT_FAILURE);
+    }
+
+    return fptr;
+}
+
+int hashmap_insert(pair *map[], char *str, int hash)
+{
+    int is_root = 1;
+
+    if (map[hash] == NULL)
+        map[hash] = init_pair_node(str);
+
+    else
+    {
+        is_root = 0;
+        pair *parent = map[hash], *wkg_node = map[hash];
+        while (wkg_node != NULL)
+        {
+            if (strcmp(wkg_node->src, str) == 0)
+                return -1;
+
+            parent = wkg_node;
+            wkg_node = wkg_node->next;
+        }
+
+        parent->next = init_pair_node(str);
+    }
+
+    return is_root;
+}
+
+pair *init_pair_node(char *src_str)
+{
+    pair *new_node = malloc(sizeof(pair));
+    new_node->dest = NULL;
+    new_node->next = NULL;
+    new_node->src = malloc((strlen(src_str) + 1) * sizeof(char));
+    strcpy(new_node->src, src_str);
+
+    return new_node;
 }
 
 void open_file(char *path, char *mode, FILE **fptr)
@@ -109,46 +214,46 @@ void open_file_in_buf(const char *path, const int path_len)
     free(edit_cmd);
 }
 
-FILE *get_tmp_path_fptr(char *tmp_path)
+void print_map(pair *map[], int keyarr[], int keyarr_len)
 {
-    FILE *fptr;
-    int tmp_fd;
+    int i;
 
-    tmp_fd = mkstemp(tmp_path);
+    printf("\n");
 
-    if (tmp_fd == -1)
+    for (i = 0; i < keyarr_len; i++)
     {
-        fprintf(stderr, "ERROR: unable to open \"%s\" as file descriptor\n", tmp_path);
-        exit(EXIT_FAILURE);
+        int key = keyarr[i], pos = 0;
+        pair *wkg_node = map[key];
+
+        while (wkg_node != NULL)
+        {
+            printf("node_src: %s, node pos: %d\n", wkg_node->src, pos);
+            printf("key pos: %d, key: %d\n", i, key);
+            wkg_node = wkg_node->next;
+            pos++;
+        }
     }
-
-    fptr = fdopen(tmp_fd, "w");
-
-    if (fptr == NULL)
-    {
-        fprintf(stderr, "ERROR: unable to open \"%s\" as file pointer\n", tmp_path);
-        exit(EXIT_FAILURE);
-    }
-
-    return fptr;
 }
 
-void read_strarr_from_fptr(FILE *fptr, char *strarr[], const int arg_count)
+void read_lines_from_fptr(FILE *fptr, pair *map[], const int keyarr[], const int keyarr_len)
 {
+    // TODO: must do more to protect against buffer overflow
     const int max_str_len = 500;
-    char *cur_str = malloc(max_str_len * sizeof(cur_str)), *read_ptr = "";
-    int i = 0, j = 0;
 
-    while (i < arg_count && read_ptr != NULL)
+    // TODO: does this need a malloc? does the read_ptr?
+    char *cur_str = malloc(max_str_len * sizeof(cur_str)), *read_ptr = "";
+    int cur_key, i = 0;
+
+    while (i < keyarr_len && read_ptr != NULL)
     {
         read_ptr = fgets(cur_str, max_str_len, fptr);
 
-        if (read_ptr != NULL && strcmp("\n", cur_str) != 0)
+        if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
-            strarr[j] = malloc(max_str_len * sizeof(strarr[j]));
+            cur_key = keyarr[i];
+            map[cur_key]->dest = malloc(max_str_len * sizeof(char));
             rm_str_nl(cur_str);
-            strcpy(strarr[j], cur_str);
-            j++;
+            strcpy(map[cur_key]->dest, cur_str);
             i++;
         }
     }
@@ -156,17 +261,37 @@ void read_strarr_from_fptr(FILE *fptr, char *strarr[], const int arg_count)
     free(cur_str);
 }
 
-void rename_files(char *old_nm_arr[], char *new_nm_arr[], const int arg_count)
+void rename_files(pair *map[], const int keyarr[], const int keyarr_len)
 {
+    /**
+     * TODO: add protections
+     *  - disallow duplicate renames
+     *  - allow swapping and cycling names
+     */
     int i, rename_result;
 
-    for (i = 0; i < arg_count; i++)
+    for (i = 0; i < keyarr_len; i++)
     {
-        rename_result = rename(old_nm_arr[i], new_nm_arr[i]);
+        pair *wkg_node = map[keyarr[i]];
 
-        if (rename_result == -1)
-            fprintf(stderr, "ERROR: Could not rename \"%s\" to \"%s\"", old_nm_arr[i], new_nm_arr[i]);
+        while (wkg_node != NULL)
+        {
+            rename_result = rename(wkg_node->src, wkg_node->dest);
+
+            if (rename_result == -1)
+                fprintf(stderr, "ERROR: Could not rename \"%s\" to \"%s\"\n", wkg_node->src, wkg_node->dest);
+
+            wkg_node = wkg_node->next;
+        }
     }
+}
+
+void rm_path(char *path)
+{
+    int rm_success = remove(path);
+
+    if (rm_success == -1)
+        fprintf(stderr, "ERROR: Unable to delete \"%s\"\n", path);
 }
 
 // https://stackoverflow.com/a/42564670
@@ -180,31 +305,19 @@ void rm_str_nl(char *str)
     *(end + 1) = '\0';
 }
 
-void rm_strarr_index(char *strarr[], int *arr_len, int index)
+void write_map_to_fptr(FILE *fptr, pair *map[], int keys[], const int num_keys)
 {
     int i;
+    pair *wkg_node;
 
-    for (i = index + 1; i < *arr_len; i++)
-        strarr[i - 1] = strarr[i];
+    for (i = 0; i < num_keys; i++)
+    {
+        wkg_node = map[keys[i]];
 
-    (*arr_len)--;
-}
-
-void write_strarr_to_fptr(FILE *fptr, char *args[], const int arg_count)
-{
-    int i;
-
-    for (i = 0; i < arg_count; i++)
-        if (strlen(args[i]) > 0)
-            fprintf(fptr, "%s\n", args[i]);
-}
-
-void print_strarr(char *strarr[], const int arr_len)
-{
-    int i;
-
-    for (i = 0; i < arr_len; i++)
-        printf("index %d: %s\n", i, strarr[i]);
-
-    printf("\n");
+        while (wkg_node != NULL)
+        {
+            fprintf(fptr, "%s\n", wkg_node->src);
+            wkg_node = wkg_node->next;
+        }
+    }
 }
