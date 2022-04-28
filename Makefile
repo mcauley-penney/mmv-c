@@ -3,10 +3,10 @@ src_dir = src
 src_files = $(notdir $(wildcard $(src_dir)/*.c)) # src files without dir prefix
 VPATH = $(src_dir) # where to look for src files
 
-
+optim = -O2
 warn = -Wall -Wextra -Wfloat-equal -Wformat=2 -pedantic-errors # warning switches
-CFLAGS = $(warn) -c # compile flags
-LFLAGS = $(warn)  # linking flags
+CFLAGS = $(warn) -c $(optim) # compile flags
+LFLAGS = $(warn) # linking flags
 
 
 # object file names
