@@ -1,16 +1,38 @@
 /**
  * TODO:
- * 1. replace unsafe functions with safe ones
- * 2. produce documentation
- * 3. determine what datatype to use for numerical values here
- * 4. make param names uniform, e.g. arg_count vs arr_len, etc.
- * 5. enforce C naming conventions
+ * 0. fix directory movement
+ *      - returns an error that it cannot be moved to a temp, even though no
+ *        collision is occuring and it should not be moved to a temp location
+ *
+ * 1. attempt to make collision detection less janky
+ *      - if we can simplify it while retaining speed, we should
+ *
+ * 2. replace unsafe functions with safe ones
+ *      - strncpy
+ *      - see read_lines_from_fptr specifically
+ *
+ * 3. produce documentation
+ *      - in .c for maintainers (that's me!), in .h for external users
+ *
+ * 4. determine what datatype to use for numerical values here
+ *      - shouldn't use int for strlen?
+ *
+ * 5. make param names uniform, e.g. arg_count vs arr_len, etc.
+ *
+ * 6. enforce C naming conventions
+ *
  * 7. group functions in main into parent functions after done
- * 8. alphabetize fns and remove unused defs
+ *      - it's a mess, fix it
+ */
+
+/**
+ *  Title       : mmv.c
+ *  Description : interactively move or rename files and directories
+ *  Author      : Jacob Penney
+ *  Credit      : itchyny/mmv
  */
 
 #include "mmv.h"
-#include <time.h>
 
 int main(int argc, char *argv[])
 {
@@ -36,7 +58,7 @@ int main(int argc, char *argv[])
 
     for (i = 1; i < argc; i++)
     {
-        hash = fnv_32a_str(argv[i]) % map_size;
+        hash = fnv_32a_str(argv[i], map_size);
 
         insert_key = hashmap_insert(map, argv[i], hash);
 
@@ -47,16 +69,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    // ------------------------------------------------------------------------
-#ifdef TESTING
-    print_map(map, keyarr, keyarr_len);
-#endif
-    // ------------------------------------------------------------------------
-
     tmp_fptr = get_tmp_path_fptr(tmp_path);
     write_map_to_fptr(tmp_fptr, map, keyarr, keyarr_len);
     // there is no corresponding explicit fopen() call for this fclose()
-    // because mkstemp in mk_uniq_path() opens temp file for us
+    // because mkstemp in get_tmp_path_fptr() opens temp file for us
     fclose(tmp_fptr);
 
     open_file_in_buf(tmp_path, tmp_path_len);
@@ -64,10 +80,10 @@ int main(int argc, char *argv[])
     open_file(tmp_path, "r", &tmp_fptr);
     read_lines_from_fptr(tmp_fptr, map, keyarr, keyarr_len);
     fclose(tmp_fptr);
-
-    rename_files(map, keyarr, keyarr_len);
-
     rm_path(tmp_path);
+
+    rename_files(map, map_size, keyarr, keyarr_len);
+
     free_map(map, keyarr, keyarr_len);
 
     // ------------------------------------------------------------------------
@@ -83,7 +99,39 @@ int main(int argc, char *argv[])
 
 // ----------------------------------------------------------------------------
 
-Fnv32_t fnv_32a_str(char *str)
+void map_update_src(pair *map[], int hash, int pos, char *new_str)
+{
+    int i;
+    pair *wkg_node = map[hash];
+
+    for (i = 0; i < pos; i++)
+        wkg_node = wkg_node->next;
+
+    free(wkg_node->src);
+
+    wkg_node->src = malloc((strlen(new_str) + 1) * sizeof(wkg_node->src));
+
+    strcpy(wkg_node->src, new_str);
+}
+
+int map_find_src_pos(pair *map[], int hash, char *str)
+{
+    int i;
+    pair *wkg_node = map[hash];
+
+    // access map at key
+    for (i = 0; wkg_node != NULL; i++)
+    {
+        if (strcmp(str, wkg_node->src) == 0)
+            return i;
+
+        wkg_node = wkg_node->next;
+    }
+
+    return -1;
+}
+
+Fnv32_t fnv_32a_str(char *str, int map_size)
 {
     Fnv32_t hval = ((Fnv32_t)0x811c9dc5);
     unsigned char *s = (unsigned char *)str; /* unsigned string */
@@ -98,7 +146,7 @@ Fnv32_t fnv_32a_str(char *str)
         hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
     }
 
-    return hval;
+    return hval % map_size;
 }
 
 void free_map(pair *map[], const int keyarr[], const int keyarr_len)
@@ -119,8 +167,8 @@ void free_pair_ll(pair *node)
     {
         free_pair_ll(node->next);
 
-        free(node->dest);
         free(node->src);
+        free(node->dest);
         free(node);
     }
 }
@@ -128,9 +176,7 @@ void free_pair_ll(pair *node)
 FILE *get_tmp_path_fptr(char *tmp_path)
 {
     FILE *fptr;
-    int tmp_fd;
-
-    tmp_fd = mkstemp(tmp_path);
+    int tmp_fd = mkstemp(tmp_path);
 
     if (tmp_fd == -1)
     {
@@ -177,10 +223,14 @@ int hashmap_insert(pair *map[], char *str, int hash)
 
 pair *init_pair_node(char *src_str)
 {
+    int src_len = (strlen(src_str) + 1);
     pair *new_node = malloc(sizeof(pair));
-    new_node->dest = NULL;
     new_node->next = NULL;
-    new_node->src = malloc((strlen(src_str) + 1) * sizeof(char));
+    new_node->dest = malloc(src_len * sizeof(char));
+    new_node->src = malloc(src_len * sizeof(char));
+
+    // init dest to same string so that rename may ignore unchanged names
+    strcpy(new_node->dest, src_str);
     strcpy(new_node->src, src_str);
 
     return new_node;
@@ -225,8 +275,8 @@ void print_map(pair *map[], int keyarr[], int keyarr_len)
 
         while (wkg_node != NULL)
         {
-            printf("node_src: %s, node pos: %d\n", wkg_node->src, pos);
-            printf("key pos: %d, key: %d\n", i, key);
+            printf("node_src: %s, node_dest: %s\n", wkg_node->src, wkg_node->dest);
+            printf("key: %d, list_pos: %d\n", key, pos);
             wkg_node = wkg_node->next;
             pos++;
         }
@@ -247,6 +297,7 @@ void read_lines_from_fptr(FILE *fptr, pair *map[], const int keyarr[], const int
         if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
             cur_key = keyarr[i];
+            free(map[cur_key]->dest);
             map[cur_key]->dest = malloc(max_str_len * sizeof(char));
             rm_str_nl(cur_str);
             strcpy(map[cur_key]->dest, cur_str);
@@ -255,14 +306,14 @@ void read_lines_from_fptr(FILE *fptr, pair *map[], const int keyarr[], const int
     }
 }
 
-void rename_files(pair *map[], const int keyarr[], const int keyarr_len)
+void rename_files(pair *map[], const int map_size, const int keyarr[], const int keyarr_len)
 {
     /**
      * TODO: add protections
      *  - disallow duplicate renames
-     *  - allow swapping and cycling names
+     *      - allow swapping and cycling names
      */
-    int i, rename_result;
+    int i;
 
     for (i = 0; i < keyarr_len; i++)
     {
@@ -270,14 +321,39 @@ void rename_files(pair *map[], const int keyarr[], const int keyarr_len)
 
         while (wkg_node != NULL)
         {
-            rename_result = rename(wkg_node->src, wkg_node->dest);
+            char *cur_dest = wkg_node->dest;
 
-            if (rename_result == -1)
-                fprintf(stderr, "ERROR: Could not rename \"%s\" to \"%s\"\n", wkg_node->src, wkg_node->dest);
+            // if current destination exists in fs
+            if (access(cur_dest, F_OK) == 0)
+            {
+                // check if the dest is in our map as a source
+                int dest_hash = fnv_32a_str(cur_dest, map_size);
+                int node_pos = map_find_src_pos(map, dest_hash, cur_dest);
+
+                if (node_pos != -1)
+                {
+                    char tmp_path[] = "mmv_XXXXXX";
+                    int tmp_fd = mkstemp(tmp_path);
+                    close(tmp_fd);
+
+                    map_update_src(map, dest_hash, node_pos, tmp_path);
+                    rename_path_pair(cur_dest, tmp_path);
+                }
+            }
+
+            rename_path_pair(wkg_node->src, cur_dest);
 
             wkg_node = wkg_node->next;
         }
     }
+}
+
+void rename_path_pair(char *src, char *dest)
+{
+    int rename_result = rename(src, dest);
+
+    if (rename_result == -1)
+        fprintf(stderr, "ERROR: Could not rename \"%s\" to \"%s\"\n", src, dest);
 }
 
 void rm_path(char *path)
