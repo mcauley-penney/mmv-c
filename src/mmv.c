@@ -104,11 +104,11 @@ Fnv32_t fnv_32a_str(char *str)
 void free_map(pair *map[], const int keyarr[], const int keyarr_len)
 {
     int i;
+    pair *wkg_node;
 
     for (i = 0; i < keyarr_len; i++)
     {
-        pair *wkg_node = map[keyarr[i]];
-
+        wkg_node = map[keyarr[i]];
         free_pair_ll(wkg_node);
     }
 }
@@ -122,8 +122,6 @@ void free_pair_ll(pair *node)
         free(node->dest);
         free(node->src);
         free(node);
-
-        node = NULL;
     }
 }
 
@@ -239,12 +237,10 @@ void read_lines_from_fptr(FILE *fptr, pair *map[], const int keyarr[], const int
 {
     // TODO: must do more to protect against buffer overflow
     const int max_str_len = 500;
-
-    // TODO: does this need a malloc? does the read_ptr?
-    char *cur_str = malloc(max_str_len * sizeof(cur_str)), *read_ptr = "";
+    char cur_str[max_str_len], *read_ptr = "";
     int cur_key, i = 0;
 
-    while (i < keyarr_len && read_ptr != NULL)
+    while (read_ptr != NULL && i < keyarr_len)
     {
         read_ptr = fgets(cur_str, max_str_len, fptr);
 
@@ -257,8 +253,6 @@ void read_lines_from_fptr(FILE *fptr, pair *map[], const int keyarr[], const int
             i++;
         }
     }
-
-    free(cur_str);
 }
 
 void rename_files(pair *map[], const int keyarr[], const int keyarr_len)
