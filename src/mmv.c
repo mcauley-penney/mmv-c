@@ -20,9 +20,6 @@
  * 5. make param names uniform, e.g. arg_count vs arr_len, etc.
  *
  * 6. enforce C naming conventions
- *
- * 7. group functions in main into parent functions after done
- *      - it's a mess, fix it
  */
 
 /**
@@ -48,36 +45,22 @@ int main(int argc, char *argv[])
     // use variable (instead of, maybe, macro) because this string will be
     // modified in place and reused
     char tmp_path[] = "/tmp/mmv_XXXXXX";
-    int hash, i, insert_key, keyarr[argc], keyarr_len = 0, map_size = (6 * argc) + 1;
+    int keyarr[argc], key_arrlen = 0, map_size = (6 * argc) + 1;
     struct StrPairNode *map[map_size];
 
-    for (i = 0; i < map_size; i++)
-        map[i] = NULL;
+    init_name_hashmap(argv, argc, map, map_size, keyarr, &key_arrlen);
 
-    for (i = 1; i < argc; i++)
-    {
-        hash = fnv_32a_str(argv[i], map_size);
+    write_old_names_to_tmp_file(tmp_path, map, keyarr, key_arrlen);
 
-        insert_key = hashmap_insert(map, argv[i], hash);
+    open_tmp_file_in_editor(tmp_path);
 
-        if (insert_key == 1)
-        {
-            keyarr[keyarr_len] = hash;
-            keyarr_len++;
-        }
-    }
-
-    write_old_names_to_tmp_buf(tmp_path, map, keyarr, keyarr_len);
-
-    open_file_in_buf(tmp_path);
-
-    read_new_names_from_tmp_buf(tmp_path, map, keyarr, keyarr_len);
+    read_new_names_from_tmp_file(tmp_path, map, keyarr, key_arrlen);
 
     rm_path(tmp_path);
 
-    rename_files(map, map_size, keyarr, keyarr_len);
+    rename_files(map, map_size, keyarr, key_arrlen);
 
-    free_map(map, keyarr, keyarr_len);
+    free_map(map, keyarr, key_arrlen);
 
     // ------------------------------------------------------------------------
 #ifdef TESTING
@@ -92,7 +75,32 @@ int main(int argc, char *argv[])
 
 // ----------------------------------------------------------------------------
 
-void read_new_names_from_tmp_buf(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
+// TODO: simplify this using struct
+void init_name_hashmap(char *args_arr[], int args_arrlen, struct StrPairNode *map[], int map_len, int key_arr[],
+                       int *key_arrlen)
+{
+    int hash, i, insert_key;
+
+    for (i = 0; i < map_len; i++)
+        map[i] = NULL;
+
+    for (i = 1; i < args_arrlen; i++)
+    {
+        char *cur_arg = args_arr[i];
+
+        hash = get_fnv_32a_str_hash(cur_arg, map_len);
+
+        insert_key = hashmap_insert(map, cur_arg, hash);
+
+        if (insert_key == 1)
+        {
+            key_arr[*key_arrlen] = hash;
+            (*key_arrlen)++;
+        }
+    }
+}
+
+void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
 {
     FILE *tmp_fptr;
 
@@ -101,14 +109,13 @@ void read_new_names_from_tmp_buf(char tmp_path[], struct StrPairNode *map[], int
     fclose(tmp_fptr);
 }
 
-void write_old_names_to_tmp_buf(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
+void write_old_names_to_tmp_file(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
 {
-    FILE *tmp_fptr;
-
-    tmp_fptr = get_tmp_path_fptr(tmp_path);
+    FILE *tmp_fptr = get_tmp_path_fptr(tmp_path);
     write_map_to_fptr(tmp_fptr, map, keyarr, keyarr_len);
-    // there is no corresponding explicit fopen() call for this fclose()
-    // because mkstemp in get_tmp_path_fptr() opens temp file for us
+    // there is no corresponding explicit fopen() call for this
+    // fclose() because mkstemp in get_tmp_path_fptr() opens
+    // temp file for us
     fclose(tmp_fptr);
 }
 
@@ -144,7 +151,7 @@ int map_find_src_pos(struct StrPairNode *map[], int hash, char *str)
     return -1;
 }
 
-Fnv32_t fnv_32a_str(char *str, int map_size)
+Fnv32_t get_fnv_32a_str_hash(char *str, int map_size)
 {
     Fnv32_t hval = ((Fnv32_t)0x811c9dc5);
     unsigned char *s = (unsigned char *)str; /* unsigned string */
@@ -260,7 +267,7 @@ void open_file(char *path, char *mode, FILE **fptr)
     }
 }
 
-void open_file_in_buf(const char *path)
+void open_tmp_file_in_editor(const char *path)
 {
     char *editor_cmd = "$EDITOR ";
     int edit_cmd_len = strlen(editor_cmd) + strlen(path) + 1;
@@ -340,7 +347,7 @@ void rename_files(struct StrPairNode *map[], const int map_size, const int keyar
             if (access(cur_dest, F_OK) == 0)
             {
                 // check if the dest is in our map as a source
-                int dest_hash = fnv_32a_str(cur_dest, map_size);
+                int dest_hash = get_fnv_32a_str_hash(cur_dest, map_size);
                 int node_pos = map_find_src_pos(map, dest_hash, cur_dest);
 
                 if (node_pos != -1)
