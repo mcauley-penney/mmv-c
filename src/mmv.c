@@ -48,10 +48,8 @@ int main(int argc, char *argv[])
     // use variable (instead of, maybe, macro) because this string will be
     // modified in place and reused
     char tmp_path[] = "/tmp/mmv_XXXXXX";
-    const int tmp_path_len = strlen(tmp_path);
-    FILE *tmp_fptr;
     int hash, i, insert_key, keyarr[argc], keyarr_len = 0, map_size = (6 * argc) + 1;
-    pair *map[map_size];
+    struct StrPairNode *map[map_size];
 
     for (i = 0; i < map_size; i++)
         map[i] = NULL;
@@ -69,17 +67,12 @@ int main(int argc, char *argv[])
         }
     }
 
-    tmp_fptr = get_tmp_path_fptr(tmp_path);
-    write_map_to_fptr(tmp_fptr, map, keyarr, keyarr_len);
-    // there is no corresponding explicit fopen() call for this fclose()
-    // because mkstemp in get_tmp_path_fptr() opens temp file for us
-    fclose(tmp_fptr);
+    write_old_names_to_tmp_buf(tmp_path, map, keyarr, keyarr_len);
 
-    open_file_in_buf(tmp_path, tmp_path_len);
+    open_file_in_buf(tmp_path);
 
-    open_file(tmp_path, "r", &tmp_fptr);
-    read_lines_from_fptr(tmp_fptr, map, keyarr, keyarr_len);
-    fclose(tmp_fptr);
+    read_new_names_from_tmp_buf(tmp_path, map, keyarr, keyarr_len);
+
     rm_path(tmp_path);
 
     rename_files(map, map_size, keyarr, keyarr_len);
@@ -99,10 +92,30 @@ int main(int argc, char *argv[])
 
 // ----------------------------------------------------------------------------
 
-void map_update_src(pair *map[], int hash, int pos, char *new_str)
+void read_new_names_from_tmp_buf(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
+{
+    FILE *tmp_fptr;
+
+    open_file(tmp_path, "r", &tmp_fptr);
+    read_lines_from_fptr(tmp_fptr, map, keyarr, keyarr_len);
+    fclose(tmp_fptr);
+}
+
+void write_old_names_to_tmp_buf(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
+{
+    FILE *tmp_fptr;
+
+    tmp_fptr = get_tmp_path_fptr(tmp_path);
+    write_map_to_fptr(tmp_fptr, map, keyarr, keyarr_len);
+    // there is no corresponding explicit fopen() call for this fclose()
+    // because mkstemp in get_tmp_path_fptr() opens temp file for us
+    fclose(tmp_fptr);
+}
+
+void map_update_src(struct StrPairNode *map[], int hash, int pos, char *new_str)
 {
     int i;
-    pair *wkg_node = map[hash];
+    struct StrPairNode *wkg_node = map[hash];
 
     for (i = 0; i < pos; i++)
         wkg_node = wkg_node->next;
@@ -114,10 +127,10 @@ void map_update_src(pair *map[], int hash, int pos, char *new_str)
     strcpy(wkg_node->src, new_str);
 }
 
-int map_find_src_pos(pair *map[], int hash, char *str)
+int map_find_src_pos(struct StrPairNode *map[], int hash, char *str)
 {
     int i;
-    pair *wkg_node = map[hash];
+    struct StrPairNode *wkg_node = map[hash];
 
     // access map at key
     for (i = 0; wkg_node != NULL; i++)
@@ -149,10 +162,10 @@ Fnv32_t fnv_32a_str(char *str, int map_size)
     return hval % map_size;
 }
 
-void free_map(pair *map[], const int keyarr[], const int keyarr_len)
+void free_map(struct StrPairNode *map[], const int keyarr[], const int keyarr_len)
 {
     int i;
-    pair *wkg_node;
+    struct StrPairNode *wkg_node;
 
     for (i = 0; i < keyarr_len; i++)
     {
@@ -161,7 +174,7 @@ void free_map(pair *map[], const int keyarr[], const int keyarr_len)
     }
 }
 
-void free_pair_ll(pair *node)
+void free_pair_ll(struct StrPairNode *node)
 {
     if (node != NULL)
     {
@@ -195,7 +208,7 @@ FILE *get_tmp_path_fptr(char *tmp_path)
     return fptr;
 }
 
-int hashmap_insert(pair *map[], char *str, int hash)
+int hashmap_insert(struct StrPairNode *map[], char *str, int hash)
 {
     int is_root = 1;
 
@@ -205,7 +218,7 @@ int hashmap_insert(pair *map[], char *str, int hash)
     else
     {
         is_root = 0;
-        pair *parent = map[hash], *wkg_node = map[hash];
+        struct StrPairNode *parent = map[hash], *wkg_node = map[hash];
         while (wkg_node != NULL)
         {
             if (strcmp(wkg_node->src, str) == 0)
@@ -221,10 +234,10 @@ int hashmap_insert(pair *map[], char *str, int hash)
     return is_root;
 }
 
-pair *init_pair_node(char *src_str)
+struct StrPairNode *init_pair_node(char *src_str)
 {
     int src_len = (strlen(src_str) + 1);
-    pair *new_node = malloc(sizeof(pair));
+    struct StrPairNode *new_node = malloc(sizeof(struct StrPairNode));
     new_node->next = NULL;
     new_node->dest = malloc(src_len * sizeof(char));
     new_node->src = malloc(src_len * sizeof(char));
@@ -247,10 +260,10 @@ void open_file(char *path, char *mode, FILE **fptr)
     }
 }
 
-void open_file_in_buf(const char *path, const int path_len)
+void open_file_in_buf(const char *path)
 {
     char *editor_cmd = "$EDITOR ";
-    int edit_cmd_len = strlen(editor_cmd) + path_len + 1;
+    int edit_cmd_len = strlen(editor_cmd) + strlen(path) + 1;
     char *edit_cmd = malloc(edit_cmd_len * sizeof(edit_cmd));
 
     strcpy(edit_cmd, editor_cmd);
@@ -262,7 +275,7 @@ void open_file_in_buf(const char *path, const int path_len)
     free(edit_cmd);
 }
 
-void print_map(pair *map[], int keyarr[], int keyarr_len)
+void print_map(struct StrPairNode *map[], int keyarr[], int keyarr_len)
 {
     int i;
 
@@ -271,7 +284,7 @@ void print_map(pair *map[], int keyarr[], int keyarr_len)
     for (i = 0; i < keyarr_len; i++)
     {
         int key = keyarr[i], pos = 0;
-        pair *wkg_node = map[key];
+        struct StrPairNode *wkg_node = map[key];
 
         while (wkg_node != NULL)
         {
@@ -283,7 +296,7 @@ void print_map(pair *map[], int keyarr[], int keyarr_len)
     }
 }
 
-void read_lines_from_fptr(FILE *fptr, pair *map[], const int keyarr[], const int keyarr_len)
+void read_lines_from_fptr(FILE *fptr, struct StrPairNode *map[], const int keyarr[], const int keyarr_len)
 {
     // TODO: must do more to protect against buffer overflow
     const int max_str_len = 500;
@@ -306,7 +319,7 @@ void read_lines_from_fptr(FILE *fptr, pair *map[], const int keyarr[], const int
     }
 }
 
-void rename_files(pair *map[], const int map_size, const int keyarr[], const int keyarr_len)
+void rename_files(struct StrPairNode *map[], const int map_size, const int keyarr[], const int keyarr_len)
 {
     /**
      * TODO: add protections
@@ -317,7 +330,7 @@ void rename_files(pair *map[], const int map_size, const int keyarr[], const int
 
     for (i = 0; i < keyarr_len; i++)
     {
-        pair *wkg_node = map[keyarr[i]];
+        struct StrPairNode *wkg_node = map[keyarr[i]];
 
         while (wkg_node != NULL)
         {
@@ -375,10 +388,10 @@ void rm_str_nl(char *str)
     *(end + 1) = '\0';
 }
 
-void write_map_to_fptr(FILE *fptr, pair *map[], int keys[], const int num_keys)
+void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], int keys[], const int num_keys)
 {
     int i;
-    pair *wkg_node;
+    struct StrPairNode *wkg_node;
 
     for (i = 0; i < num_keys; i++)
     {
