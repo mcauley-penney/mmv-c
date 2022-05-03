@@ -1,21 +1,40 @@
 /**
  * TODO:
- * 1. attempt to make collision detection less janky
- *      - if we can simplify it while retaining speed, we should
  *
- * 2. replace unsafe functions with safe ones
- *      - strncpy
- *      - see read_lines_from_fptr specifically
+ * read and improve:
+ *  • https://wiki.sei.cmu.edu/confluence/display/c/SEI+CERT+C+Coding+Standard
+ *  • https://security.web.cern.ch/recommendations/en/codetools/c.shtml
  *
- * 3. produce documentation
- *      - in .c for maintainers (that's me!), in .h for external users
+ * 1. security
+ *      a. replace unsafe functions with safe ones
+ *      b. attempt to solve race conditions with access()
+ *          • use another means completely
+ *              • https://stackoverflow.com/a/44741436
+ *              • https://stackoverflow.com/a/20666866
+ *      c. remove system and use something else?
+ *      d. add checks for malloc failure
+ *      e. should use errno handling instead of plain return checks?
  *
- * 4. determine what datatype to use for numerical values here
- *      - shouldn't use int for strlen?
+ * 2. optimization
+ *      • mem optimization by Christer Ericson
+ *          • https://www.gdcvault.com/play/1022689/Memory
+ *          • lukasz.dk/mirror/research-scea/research/pdfs/GDC2003_Memory_Optimization_18Mar03.pdf
+ *      • investigate restrict keyword
+ *          • https://stackoverflow.com/questions/745870/realistic-usage-of-the-c99-restrict-keyword
+ *      • investigate const more thoroughly
  *
- * 5. make param names uniform, e.g. arg_count vs arr_len, etc.
+ * 3. get value of EDITOR, may not be assigned
+ *      • getenv_s() and assign if not defined
  *
- * 6. enforce C naming conventions
+ * 4. produce documentation
+ *      • in .c for maintainers (that's me!), in .h for external users
+ *
+ * 5. determine what datatype to use for numerical values here
+ *      • shouldn't use int for strlen?
+ *
+ * 6. make param names uniform, e.g. arg_count vs arr_len, etc.
+ * 7. enforce C naming conventions
+ *
  */
 
 /**
@@ -37,10 +56,16 @@ int main(int argc, char *argv[])
 #endif
     // ------------------------------------------------------------------------
 
+    if (argc < 2)
+    {
+        fprintf(stderr, "Please enter at least one file name to modify!\n");
+        exit(EXIT_FAILURE);
+    }
+
     // use variable (instead of, maybe, macro) because this string will be
     // modified in place and reused
     char tmp_path[] = "/tmp/mmv_XXXXXX";
-    int hash, i, keyarr[argc], keyarr_len = 0, map_size = (6 * argc) + 1;
+    int hash, i, keyarr[argc], keyarr_len = 0, map_size = (6 * (argc - 1)) + 1;
     struct StrPairNode *map[map_size];
 
     for (i = 0; i < map_size; i++)
@@ -48,9 +73,7 @@ int main(int argc, char *argv[])
 
     for (i = 1; i < argc; i++)
     {
-        char *cur_arg = argv[i];
-
-        hash = attempt_strnode_map_insert(cur_arg, map, map_size);
+        hash = attempt_strnode_map_insert(argv[i], map, map_size);
 
         if (hash != -1)
         {
@@ -75,25 +98,22 @@ int main(int argc, char *argv[])
 #ifdef TESTING
     end = clock();
     cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("time: %f\n", cpu_time_used);
+    printf("cpu time: %f\n", cpu_time_used);
 #endif
     // ------------------------------------------------------------------------
 
     return EXIT_SUCCESS;
 }
 
-struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, char *src)
+struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, char *new_src)
 {
     if (cur_node == NULL)
-    {
-        cur_node = init_pair_node(src);
-        return cur_node;
-    }
+        return init_pair_node(new_src);
 
-    if (strcmp(cur_node->src, src) == 0)
+    if (strcmp(cur_node->src, new_src) == 0)
         return NULL;
 
-    cur_node->next = add_strpair_node(cur_node->next, src);
+    cur_node->next = add_strpair_node(cur_node->next, new_src);
 
     return cur_node;
 }
@@ -102,9 +122,11 @@ int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_siz
 {
     int hash = get_fnv_32a_str_hash(str, map_size);
 
-    hash = hashmap_insert(map, str, hash);
+    int hash_to_insert = map[hash] == NULL ? hash : -1;
 
-    return hash;
+    map[hash] = add_strpair_node(map[hash], str);
+
+    return hash_to_insert;
 }
 
 Fnv32_t get_fnv_32a_str_hash(char *str, int map_size)
@@ -149,16 +171,23 @@ void free_pair_ll(struct StrPairNode *node)
     }
 }
 
-FILE *get_tmp_path_fptr(char *tmp_path)
+int get_tmp_path_fd(char *tmp_path)
 {
-    FILE *fptr;
-    int tmp_fd = mkstemp(tmp_path);
+    int fd = mkstemp(tmp_path);
 
-    if (tmp_fd == -1)
+    if (fd == -1)
     {
         fprintf(stderr, "ERROR: unable to open \"%s\" as file descriptor\n", tmp_path);
         exit(EXIT_FAILURE);
     }
+
+    return fd;
+}
+
+FILE *get_tmp_path_fptr(char *tmp_path)
+{
+    FILE *fptr;
+    int tmp_fd = get_tmp_path_fd(tmp_path);
 
     fptr = fdopen(tmp_fd, "w");
 
@@ -169,15 +198,6 @@ FILE *get_tmp_path_fptr(char *tmp_path)
     }
 
     return fptr;
-}
-
-int hashmap_insert(struct StrPairNode *map[], char *str, int hash)
-{
-    int output = map[hash] == NULL ? hash : -1;
-
-    map[hash] = add_strpair_node(map[hash], str);
-
-    return output;
 }
 
 struct StrPairNode *init_pair_node(char *src_str)
@@ -222,9 +242,7 @@ void map_update_src(struct StrPairNode *map[], int hash, int pos, char *new_str)
         wkg_node = wkg_node->next;
 
     free(wkg_node->src);
-
     wkg_node->src = malloc((strlen(new_str) + 1) * sizeof(wkg_node->src));
-
     strcpy(wkg_node->src, new_str);
 }
 
@@ -242,16 +260,13 @@ void open_file(char *path, char *mode, FILE **fptr)
 void open_tmp_file_in_editor(const char *path)
 {
     char *editor_cmd = "$EDITOR ";
-    int edit_cmd_len = strlen(editor_cmd) + strlen(path) + 1;
-    char *edit_cmd = malloc(edit_cmd_len * sizeof(edit_cmd));
+    char edit_cmd[strlen(editor_cmd) + strlen(path) + 1];
 
     strcpy(edit_cmd, editor_cmd);
     strcat(edit_cmd, path);
 
     // open temporary file containing argv using editor of choice
     system(edit_cmd);
-
-    free(edit_cmd);
 }
 
 void read_lines_from_fptr(FILE *fptr, struct StrPairNode *map[], const int keyarr[], const int keyarr_len)
@@ -267,12 +282,11 @@ void read_lines_from_fptr(FILE *fptr, struct StrPairNode *map[], const int keyar
 
         if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
-            cur_key = keyarr[i];
+            cur_str[strlen(cur_str) - 1] = '\0';
 
+            cur_key = keyarr[i];
             free(map[cur_key]->dest);
             map[cur_key]->dest = malloc(max_str_len * sizeof(char));
-
-            rm_str_nl(cur_str);
             strcpy(map[cur_key]->dest, cur_str);
 
             i++;
@@ -301,31 +315,50 @@ void rename_files(struct StrPairNode *map[], const int map_size, const int keyar
         {
             char *cur_dest = wkg_node->dest;
 
-            // if current destination exists in fs
-            if (access(cur_dest, F_OK) == 0)
-            {
-                // TODO:
-                //  1. attempt to make this smarter?
-                //  2. make this it's own function?
-
-                // check if the dest is in our map as a source
-                int dest_hash = get_fnv_32a_str_hash(cur_dest, map_size);
-                int node_pos = map_find_src_pos(map, dest_hash, cur_dest);
-
-                if (node_pos != -1)
-                {
-                    char tmp_path[] = "mmv_XXXXXX";
-                    int tmp_fd = mkstemp(tmp_path);
-                    close(tmp_fd);
-
-                    map_update_src(map, dest_hash, node_pos, tmp_path);
-                    rename_path_pair(cur_dest, tmp_path);
-                }
-            }
+            handle_rename_collision(map, map_size, cur_dest);
 
             rename_path_pair(wkg_node->src, cur_dest);
 
             wkg_node = wkg_node->next;
+        }
+    }
+}
+
+void handle_rename_collision(struct StrPairNode *map[], int map_size, char *cur_dest)
+{
+
+    /**
+     * This process checks if the destination file name of a rename
+     * operation exists in the filesystem and, if not, renames the
+     * source name to that destination. If the file does exist, we
+     * must rename the existing file with the destination name to a
+     * temporary name so that the current operation may proceed.
+     *
+     * The danger of a TOCTOU vulnerability in this particular
+     * situation is that this process could overwrite a file that
+     * it sees doesn't exist but is created after the check.
+     */
+    // created after the check.
+    if (access(cur_dest, F_OK) == 0)
+    {
+        // check if the dest is in our map as a source
+        int dest_hash = get_fnv_32a_str_hash(cur_dest, map_size);
+        int node_pos = map_find_src_pos(map, dest_hash, cur_dest);
+
+        if (node_pos != -1)
+        {
+            char tmp_path[] = "mmv_XXXXXX";
+            int tmp_fd = get_tmp_path_fd(tmp_path);
+
+            map_update_src(map, dest_hash, node_pos, tmp_path);
+            rename_path_pair(cur_dest, tmp_path);
+
+            // only close file descriptor after change has been
+            // made. Closing it then swapping names is a Time of
+            // Check, Time of Use vulnerability. It really doesn't
+            // apply here but it is smart to protect ourselves
+            // https://stackoverflow.com/a/27680873
+            close(tmp_fd);
         }
     }
 }
@@ -344,17 +377,6 @@ void rm_path(char *path)
 
     if (rm_success == -1)
         fprintf(stderr, "ERROR: Unable to delete \"%s\"\n", path);
-}
-
-// https://stackoverflow.com/a/42564670
-void rm_str_nl(char *str)
-{
-    char *end = str + strlen(str) - 1;
-
-    while (end > str && isspace(*end))
-        end--;
-
-    *(end + 1) = '\0';
 }
 
 void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], int keys[], const int num_keys)

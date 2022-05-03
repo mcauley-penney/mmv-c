@@ -9,12 +9,6 @@
 
 typedef u_int32_t Fnv32_t;
 
-struct KeysData
-{
-    int key_arrlen;
-    int key_arr[];
-};
-
 struct StrPairNode
 {
     char *src;
@@ -23,11 +17,12 @@ struct StrPairNode
 };
 
 int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_size);
-Fnv32_t get_fnv_32a_str_hash(char *str, int map_size);
 void free_map(struct StrPairNode *map[], const int keyarr[], const int keyarr_len);
 void free_pair_ll(struct StrPairNode *node);
+Fnv32_t get_fnv_32a_str_hash(char *str, int map_size);
+int get_tmp_path_fd(char *tmp_path);
+void handle_rename_collision(struct StrPairNode *map[], int map_size, char *cur_dest);
 FILE *get_tmp_path_fptr(char *tmp_path);
-int hashmap_insert(struct StrPairNode *map[], char *str, int hash);
 struct StrPairNode *init_pair_node(char *src_str);
 int map_find_src_pos(struct StrPairNode *map[], int hash, char *str);
 void open_file(char *path, char *mode, FILE **fptr);
