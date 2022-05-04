@@ -12,7 +12,11 @@ Edit file and directory names in `$EDITOR`
 
 #### about
 ##### credit
-[itchyny/mmv](https://github.com/itchyny/mmv), for introducing me to this modern [mmv](https://www.systutorials.com/docs/linux/man/1-mmv/) alternative
+[itchyny/mmv](https://github.com/itchyny/mmv): for introducing me to this modern [mmv](https://www.systutorials.com/docs/linux/man/1-mmv/) alternative
+
+[Glenn Fowler, Landon Curt Noll, and Kiem-Phong Vo](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function): the authors of the FNV hash algorithm
+
+[Mike Parker, David MacKenzie, Jim Meyering, and all of the contributors to coreutils/mv](https://github.com/coreutils/coreutils/blob/master/src/mv.c): the OG's themselves
 
 
 ##### research

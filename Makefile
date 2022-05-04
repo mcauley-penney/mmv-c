@@ -1,4 +1,5 @@
 bin = mmv # output binary name
+bindir = /usr/bin/
 src_dir = src
 src_files = $(notdir $(wildcard $(src_dir)/*.c)) # src files without dir prefix
 VPATH = $(src_dir) # where to look for src files
@@ -23,6 +24,11 @@ obj_files = $(patsubst %.c, %.o, $(src_files))
 # name from object files provided
 $(bin): $(obj_files)
 	$(CC) $(LFLAGS) $^ -o $@
+
+
+# install target for "sudo make install"
+install:
+	install -m 557 $(bin) $(bindir)
 
 
 # clean target: remove all object files and binary
