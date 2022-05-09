@@ -316,52 +316,9 @@ void rename_files(struct StrPairNode *map[], const int map_size, const int keyar
 
         while (wkg_node != NULL)
         {
-            char *cur_dest = wkg_node->dest;
-
-            handle_rename_collision(map, map_size, cur_dest);
-
-            rename_path_pair(wkg_node->src, cur_dest);
+            rename_path_pair(wkg_node->src, wkg_node->dest);
 
             wkg_node = wkg_node->next;
-        }
-    }
-}
-
-void handle_rename_collision(struct StrPairNode *map[], int map_size, char *cur_dest)
-{
-
-    /**
-     * This process checks if the destination file name of a rename
-     * operation exists in the filesystem and, if not, renames the
-     * source name to that destination. If the file does exist, we
-     * must rename the existing file with the destination name to a
-     * temporary name so that the current operation may proceed.
-     *
-     * The danger of a TOCTOU vulnerability in this particular
-     * situation is that this process could overwrite a file that
-     * it sees doesn't exist but is created after the check.
-     */
-    // created after the check.
-    if (access(cur_dest, F_OK) == 0)
-    {
-        // check if the dest is in our map as a source
-        int dest_hash = get_fnv_32a_str_hash(cur_dest, map_size);
-        int node_pos = map_find_src_pos(map, dest_hash, cur_dest);
-
-        if (node_pos != -1)
-        {
-            char tmp_path[] = "mmv_XXXXXX";
-            int tmp_fd = get_tmp_path_fd(tmp_path);
-
-            map_update_src(map, dest_hash, node_pos, tmp_path);
-            rename_path_pair(cur_dest, tmp_path);
-
-            // only close file descriptor after change has been
-            // made. Closing it then swapping names is a Time of
-            // Check, Time of Use vulnerability. It really doesn't
-            // apply here but it is smart to protect ourselves
-            // https://stackoverflow.com/a/27680873
-            close(tmp_fd);
         }
     }
 }
