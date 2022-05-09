@@ -237,19 +237,6 @@ int map_find_src_pos(struct StrPairNode *map[], int hash, char *str)
     return -1;
 }
 
-void map_update_src(struct StrPairNode *map[], int hash, int pos, char *new_str)
-{
-    int i;
-    struct StrPairNode *wkg_node = map[hash];
-
-    for (i = 0; i < pos; i++)
-        wkg_node = wkg_node->next;
-
-    free(wkg_node->src);
-    wkg_node->src = malloc((strlen(new_str) + 1) * sizeof(wkg_node->src));
-    strcpy(wkg_node->src, new_str);
-}
-
 void open_file(char *path, char *mode, FILE **fptr)
 {
     *fptr = fopen(path, mode);
