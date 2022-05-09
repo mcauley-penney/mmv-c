@@ -20,7 +20,6 @@ int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_siz
 void free_map(struct StrPairNode *map[], const int keyarr[], const int keyarr_len);
 void free_pair_ll(struct StrPairNode *node);
 Fnv32_t get_fnv_32a_str_hash(char *str, int map_size);
-int get_tmp_path_fd(char *tmp_path);
 void handle_rename_collision(struct StrPairNode *map[], int map_size, char *cur_dest);
 FILE *get_tmp_path_fptr(char *tmp_path);
 struct StrPairNode *init_pair_node(char *src_str);

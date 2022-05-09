@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 
     rm_path(tmp_path);
 
-    rename_files(map, map_size, keyarr, keyarr_len);
+    rename_files(map, keyarr, keyarr_len);
 
     free_map(map, keyarr, keyarr_len);
 
@@ -176,9 +176,10 @@ void free_pair_ll(struct StrPairNode *node)
 
 int get_tmp_path_fd(char *tmp_path)
 {
-    int fd = mkstemp(tmp_path);
+    FILE *fptr;
+    int tmp_fd = mkstemp(tmp_path);
 
-    if (fd == -1)
+    if (tmp_fd == -1)
     {
         fprintf(stderr, "ERROR: unable to open \"%s\" as file descriptor\n", tmp_path);
         exit(EXIT_FAILURE);
@@ -310,7 +311,7 @@ void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], in
     fclose(tmp_fptr);
 }
 
-void rename_files(struct StrPairNode *map[], const int map_size, const int keyarr[], const int keyarr_len)
+void rename_files(struct StrPairNode *map[], const int keyarr[], const int keyarr_len)
 {
     int i;
 
