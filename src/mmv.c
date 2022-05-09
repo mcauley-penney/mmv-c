@@ -62,6 +62,9 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    // disallow group and other from accessing created files
+    umask(077);
+
     // use variable (instead of, maybe, macro) because this string will be
     // modified in place and reused
     char tmp_path[] = "/tmp/mmv_XXXXXX";
@@ -184,7 +187,7 @@ int get_tmp_path_fd(char *tmp_path)
     return fd;
 }
 
-FILE *get_tmp_path_fptr(char *tmp_path)
+FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
 {
     FILE *fptr;
     int tmp_fd = get_tmp_path_fd(tmp_path);
