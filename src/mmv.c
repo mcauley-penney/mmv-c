@@ -262,11 +262,15 @@ void open_file(char *path, char *mode, FILE **fptr)
 
 void open_tmp_file_in_editor(const char *path)
 {
-    char *editor_cmd = "$EDITOR ";
-    char edit_cmd[strlen(editor_cmd) + strlen(path) + 1];
+    char *editor_name = getenv("EDITOR");
 
-    strcpy(edit_cmd, editor_cmd);
-    strcat(edit_cmd, path);
+    if (editor_name == NULL)
+        editor_name = "nano";
+
+    size_t cmd_len = strlen(editor_name) + 1 + strlen(path) + 1;
+    char edit_cmd[cmd_len];
+
+    snprintf(edit_cmd, cmd_len, "%s %s", editor_name, path);
 
     // open temporary file containing argv using editor of choice
     system(edit_cmd);
