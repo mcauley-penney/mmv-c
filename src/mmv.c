@@ -1,19 +1,22 @@
 /**
- * TODO:
- *
  * read and improve:
  *  • https://wiki.sei.cmu.edu/confluence/display/c/SEI+CERT+C+Coding+Standard
  *  • https://security.web.cern.ch/recommendations/en/codetools/c.shtml
+ *  • https://resources.sei.cmu.edu/asset_files/Presentation/2016_017_101_484207.pdf
+ *      • investigate:
+ *          • ferror
+ *  • https://wiki.sei.cmu.edu/confluence/
  *
  * 1. security
- *      a. replace unsafe functions with safe ones
- *      b. attempt to solve race conditions with access()
- *          • use another means completely
- *              • https://stackoverflow.com/a/44741436
- *              • https://stackoverflow.com/a/20666866
  *      c. remove system and use something else?
- *      d. add checks for malloc failure
+ *          • could use execve
  *      e. should use errno handling instead of plain return checks?
+ *      g. must clean up resources, such as temp files and open files,
+ *         in case of an error
+ *      h. avoid in-band error indicators
+ *          • use goto chains or nested ifs
+ *              •
+ * https://wiki.sei.cmu.edu/confluence/display/c/MEM12-C.+Consider+using+a+goto+chain+when+leaving+a+function+on+error+when+using+and+releasing+resources
  *
  * 2. optimization
  *      • mem optimization by Christer Ericson
@@ -23,14 +26,8 @@
  *          • https://stackoverflow.com/questions/745870/realistic-usage-of-the-c99-restrict-keyword
  *      • investigate const more thoroughly
  *
- * 3. get value of EDITOR, may not be assigned
- *      • getenv_s() and assign if not defined
- *
  * 4. produce documentation
  *      • in .c for maintainers (that's me!), in .h for external users
- *
- * 5. determine what datatype to use for numerical values here
- *      • shouldn't use int for strlen?
  *
  * 6. make param names uniform, e.g. arg_count vs arr_len, etc.
  * 7. enforce C naming conventions
@@ -41,7 +38,6 @@
  *  Title       : mmv.c
  *  Description : interactively move or rename files and directories
  *  Author      : Jacob Penney
- *  Credit      : itchyny/mmv
  */
 
 #include "mmv.h"
@@ -110,9 +106,11 @@ int main(int argc, char *argv[])
 
 struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, char *new_src)
 {
+    // if current node is null, insert new node at current position
     if (cur_node == NULL)
         return init_pair_node(new_src);
 
+    // if the str at the current node matches the new str, do nothing
     if (strcmp(cur_node->src, new_src) == 0)
         return NULL;
 
@@ -125,8 +123,13 @@ int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_siz
 {
     int hash = get_fnv_32a_str_hash(str, map_size);
 
+    // if hash is already in list of keys, don't add it to list of
+    // keys. Because we use chaining in each hash, we only need to
+    // have a list of keys indicating the root of each chain
     int hash_to_insert = map[hash] == NULL ? hash : -1;
 
+    // attempt to add node. Will return NULL if duplicate str is
+    // found
     map[hash] = add_strpair_node(map[hash], str);
 
     return hash_to_insert;
@@ -140,10 +143,10 @@ Fnv32_t get_fnv_32a_str_hash(char *str, int map_size)
     // FNV-1a hash each octet in the buffer
     while (*s)
     {
-        /* xor the bottom with the current octet */
+        // xor the bottom with the current octet
         hval ^= (Fnv32_t)*s++;
 
-        /* multiply by the 32 bit FNV magic prime mod 2^32 */
+        // multiply by the 32 bit FNV magic prime mod 2^32
         hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
     }
 
@@ -152,14 +155,8 @@ Fnv32_t get_fnv_32a_str_hash(char *str, int map_size)
 
 void free_map(struct StrPairNode *map[], const int keyarr[], const int keyarr_len)
 {
-    int i;
-    struct StrPairNode *wkg_node;
-
-    for (i = 0; i < keyarr_len; i++)
-    {
-        wkg_node = map[keyarr[i]];
-        free_pair_ll(wkg_node);
-    }
+    for (int i = 0; i < keyarr_len; i++)
+        free_pair_ll(map[keyarr[i]]);
 }
 
 void free_pair_ll(struct StrPairNode *node)
@@ -174,7 +171,7 @@ void free_pair_ll(struct StrPairNode *node)
     }
 }
 
-int get_tmp_path_fd(char *tmp_path)
+FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
 {
     FILE *fptr;
     int tmp_fd = mkstemp(tmp_path);
@@ -185,19 +182,12 @@ int get_tmp_path_fd(char *tmp_path)
         exit(EXIT_FAILURE);
     }
 
-    return fd;
-}
-
-FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
-{
-    FILE *fptr;
-    int tmp_fd = get_tmp_path_fd(tmp_path);
-
     fptr = fdopen(tmp_fd, "w");
 
     if (fptr == NULL)
     {
         fprintf(stderr, "mmv: failed to open \"%s\" as file pointer\n", tmp_path);
+        rm_path(tmp_path);
         exit(EXIT_FAILURE);
     }
 
@@ -206,7 +196,7 @@ FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
 
 struct StrPairNode *init_pair_node(char *src_str)
 {
-    int src_len = (strlen(src_str) + 1);
+    size_t src_len = strlen(src_str) + 1;
 
     struct StrPairNode *new_node = malloc(sizeof(struct StrPairNode));
     if (new_node == NULL)
@@ -231,8 +221,8 @@ struct StrPairNode *init_pair_node(char *src_str)
     new_node->next = NULL;
 
     // init dest to same string so that rename may ignore unchanged names
-    strcpy(new_node->dest, src_str);
     strcpy(new_node->src, src_str);
+    strcpy(new_node->dest, src_str);
 
     return new_node;
 }
@@ -261,6 +251,7 @@ void open_file(char *path, char *mode, FILE **fptr)
     if (fptr == NULL)
     {
         fprintf(stderr, "mmv: failed to open \"%s\" in \"%s\" mode\n", path, mode);
+        rm_path(path);
         exit(EXIT_FAILURE);
     }
 }
@@ -281,16 +272,18 @@ void open_tmp_file_in_editor(const char *path)
     system(edit_cmd);
 }
 
-void read_lines_from_fptr(FILE *fptr, struct StrPairNode *map[], const int keyarr[], const int keyarr_len)
+void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
 {
-    // TODO: must do more to protect against buffer overflow
     const int max_str_len = 500;
     char cur_str[max_str_len], *read_ptr = "";
+    FILE *tmp_fptr;
     int cur_key, i = 0;
+
+    open_file(tmp_path, "r", &tmp_fptr);
 
     while (read_ptr != NULL && i < keyarr_len)
     {
-        read_ptr = fgets(cur_str, max_str_len, fptr);
+        read_ptr = fgets(cur_str, max_str_len, tmp_fptr);
 
         if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
@@ -303,6 +296,7 @@ void read_lines_from_fptr(FILE *fptr, struct StrPairNode *map[], const int keyar
             if (map[cur_key]->dest == NULL)
             {
                 fprintf(stderr, "mmv: failed to allocate memory for given destination \"%s\"\n", cur_str);
+                rm_path(tmp_path);
                 exit(EXIT_FAILURE);
             }
 
@@ -311,14 +305,6 @@ void read_lines_from_fptr(FILE *fptr, struct StrPairNode *map[], const int keyar
             i++;
         }
     }
-}
-
-void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
-{
-    FILE *tmp_fptr;
-
-    open_file(tmp_path, "r", &tmp_fptr);
-    read_lines_from_fptr(tmp_fptr, map, keyarr, keyarr_len);
     fclose(tmp_fptr);
 }
 
