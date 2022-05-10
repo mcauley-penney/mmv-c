@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
     if (argc < 2)
     {
-        fprintf(stderr, "Please enter at least one file name to modify!\n");
+        fprintf(stderr, "mmv: missing file operand\n");
         exit(EXIT_FAILURE);
     }
 
@@ -181,7 +181,7 @@ int get_tmp_path_fd(char *tmp_path)
 
     if (tmp_fd == -1)
     {
-        fprintf(stderr, "ERROR: unable to open \"%s\" as file descriptor\n", tmp_path);
+        fprintf(stderr, "mmv: failed to open \"%s\" as file descriptor\n", tmp_path);
         exit(EXIT_FAILURE);
     }
 
@@ -197,7 +197,7 @@ FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
 
     if (fptr == NULL)
     {
-        fprintf(stderr, "ERROR: unable to open \"%s\" as file pointer\n", tmp_path);
+        fprintf(stderr, "mmv: failed to open \"%s\" as file pointer\n", tmp_path);
         exit(EXIT_FAILURE);
     }
 
@@ -209,9 +209,26 @@ struct StrPairNode *init_pair_node(char *src_str)
     int src_len = (strlen(src_str) + 1);
 
     struct StrPairNode *new_node = malloc(sizeof(struct StrPairNode));
-    new_node->next = NULL;
-    new_node->dest = malloc(src_len * sizeof(char));
+    if (new_node == NULL)
+    {
+        fprintf(stderr, "mmv: failed to allocate memory for new map node\n");
+        exit(EXIT_FAILURE);
+    }
+
     new_node->src = malloc(src_len * sizeof(char));
+    if (new_node->src == NULL)
+    {
+        fprintf(stderr, "mmv: failed to allocate memory for new map node source\n");
+        exit(EXIT_FAILURE);
+    }
+
+    new_node->dest = malloc(src_len * sizeof(char));
+    if (new_node->dest == NULL)
+    {
+        fprintf(stderr, "mmv: failed to allocate memory for new map node destination\n");
+        exit(EXIT_FAILURE);
+    }
+    new_node->next = NULL;
 
     // init dest to same string so that rename may ignore unchanged names
     strcpy(new_node->dest, src_str);
@@ -243,7 +260,7 @@ void open_file(char *path, char *mode, FILE **fptr)
 
     if (fptr == NULL)
     {
-        fprintf(stderr, "ERROR: Unable to open \"%s\" in \"%s\" mode\n", path, mode);
+        fprintf(stderr, "mmv: failed to open \"%s\" in \"%s\" mode\n", path, mode);
         exit(EXIT_FAILURE);
     }
 }
@@ -281,7 +298,14 @@ void read_lines_from_fptr(FILE *fptr, struct StrPairNode *map[], const int keyar
 
             cur_key = keyarr[i];
             free(map[cur_key]->dest);
+
             map[cur_key]->dest = malloc(max_str_len * sizeof(char));
+            if (map[cur_key]->dest == NULL)
+            {
+                fprintf(stderr, "mmv: failed to allocate memory for given destination \"%s\"\n", cur_str);
+                exit(EXIT_FAILURE);
+            }
+
             strcpy(map[cur_key]->dest, cur_str);
 
             i++;
@@ -320,7 +344,7 @@ void rename_path_pair(char *src, char *dest)
     int rename_result = rename(src, dest);
 
     if (rename_result == -1)
-        fprintf(stderr, "ERROR: Could not rename \"%s\" to \"%s\"\n", src, dest);
+        fprintf(stderr, "mmv: failed to rename \"%s\" to \"%s\"\n", src, dest);
 }
 
 void rm_path(char *path)
@@ -328,7 +352,7 @@ void rm_path(char *path)
     int rm_success = remove(path);
 
     if (rm_success == -1)
-        fprintf(stderr, "ERROR: Unable to delete \"%s\"\n", path);
+        fprintf(stderr, "mmv: failed to delete \"%s\"\n", path);
 }
 
 void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], int keys[], const int num_keys)
