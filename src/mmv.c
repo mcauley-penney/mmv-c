@@ -7,24 +7,12 @@
  *          • ferror
  *  • https://wiki.sei.cmu.edu/confluence/
  *
- * 1. security
- *      c. remove system and use something else?
- *          • could use execve
- *      e. should use errno handling instead of plain return checks?
- *      g. must clean up resources, such as temp files and open files,
- *         in case of an error
- *      h. avoid in-band error indicators
- *          • use goto chains or nested ifs
- *              •
  * https://wiki.sei.cmu.edu/confluence/display/c/MEM12-C.+Consider+using+a+goto+chain+when+leaving+a+function+on+error+when+using+and+releasing+resources
  *
  * 2. optimization
  *      • mem optimization by Christer Ericson
  *          • https://www.gdcvault.com/play/1022689/Memory
  *          • lukasz.dk/mirror/research-scea/research/pdfs/GDC2003_Memory_Optimization_18Mar03.pdf
- *      • investigate restrict keyword
- *          • https://stackoverflow.com/questions/745870/realistic-usage-of-the-c99-restrict-keyword
- *      • investigate const more thoroughly
  *
  * 4. produce documentation
  *      • in .c for maintainers (that's me!), in .h for external users
@@ -44,14 +32,6 @@
 
 int main(int argc, char *argv[])
 {
-    // ------------------------------------------------------------------------
-#ifdef TESTING
-    clock_t start, end;
-    double cpu_time_used;
-    start = clock();
-#endif
-    // ------------------------------------------------------------------------
-
     if (argc < 2)
     {
         fprintf(stderr, "mmv: missing file operand\n");
@@ -64,12 +44,14 @@ int main(int argc, char *argv[])
     // use variable (instead of, maybe, macro) because this string will be
     // modified in place and reused
     char tmp_path[] = "/tmp/mmv_XXXXXX";
-    int hash, i, keyarr[argc], keyarr_len = 0, map_size = (6 * (argc - 1)) + 1;
+    int hash, i, keyarr[argc], keyarr_len = 0;
+    const int map_size = (6 * (argc - 1)) + 1;
     struct StrPairNode *map[map_size];
 
     for (i = 0; i < map_size; i++)
         map[i] = NULL;
 
+    // start at 1 instead of 0 to avoid reading program invocation
     for (i = 1; i < argc; i++)
     {
         hash = attempt_strnode_map_insert(argv[i], map, map_size);
@@ -93,18 +75,10 @@ int main(int argc, char *argv[])
 
     free_map(map, keyarr, keyarr_len);
 
-    // ------------------------------------------------------------------------
-#ifdef TESTING
-    end = clock();
-    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("cpu time: %f\n", cpu_time_used);
-#endif
-    // ------------------------------------------------------------------------
-
     return EXIT_SUCCESS;
 }
 
-struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, char *new_src)
+struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, const char *new_src)
 {
     // if current node is null, insert new node at current position
     if (cur_node == NULL)
@@ -153,9 +127,10 @@ Fnv32_t get_fnv_32a_str_hash(char *str, int map_size)
     return hval % map_size;
 }
 
-void free_map(struct StrPairNode *map[], const int keyarr[], const int keyarr_len)
+void free_map(struct StrPairNode *map[], const int keyarr[], int keyarr_len)
 {
-    for (int i = 0; i < keyarr_len; i++)
+    int i;
+    for (i = 0; i < keyarr_len; i++)
         free_pair_ll(map[keyarr[i]]);
 }
 
@@ -194,9 +169,9 @@ FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
     return fptr;
 }
 
-struct StrPairNode *init_pair_node(char *src_str)
+struct StrPairNode *init_pair_node(const char *src_str)
 {
-    size_t src_len = strlen(src_str) + 1;
+    const size_t src_len = (strlen(src_str) + 1) * sizeof(char);
 
     struct StrPairNode *new_node = malloc(sizeof(struct StrPairNode));
     if (new_node == NULL)
@@ -205,19 +180,20 @@ struct StrPairNode *init_pair_node(char *src_str)
         exit(EXIT_FAILURE);
     }
 
-    new_node->src = malloc(src_len * sizeof(char));
+    new_node->src = malloc(src_len);
     if (new_node->src == NULL)
     {
         fprintf(stderr, "mmv: failed to allocate memory for new map node source\n");
         exit(EXIT_FAILURE);
     }
 
-    new_node->dest = malloc(src_len * sizeof(char));
+    new_node->dest = malloc(src_len);
     if (new_node->dest == NULL)
     {
         fprintf(stderr, "mmv: failed to allocate memory for new map node destination\n");
         exit(EXIT_FAILURE);
     }
+
     new_node->next = NULL;
 
     // init dest to same string so that rename may ignore unchanged names
@@ -227,7 +203,7 @@ struct StrPairNode *init_pair_node(char *src_str)
     return new_node;
 }
 
-int map_find_src_pos(struct StrPairNode *map[], int hash, char *str)
+int map_find_src_pos(struct StrPairNode *map[], int hash, const char *str)
 {
     int i;
     struct StrPairNode *wkg_node = map[hash];
@@ -244,7 +220,7 @@ int map_find_src_pos(struct StrPairNode *map[], int hash, char *str)
     return -1;
 }
 
-void open_file(char *path, char *mode, FILE **fptr)
+void open_file(char *path, const char *mode, FILE **fptr)
 {
     *fptr = fopen(path, mode);
 
@@ -263,7 +239,7 @@ void open_tmp_file_in_editor(const char *path)
     if (editor_name == NULL)
         editor_name = "nano";
 
-    size_t cmd_len = strlen(editor_name) + 1 + strlen(path) + 1;
+    const size_t cmd_len = strlen(editor_name) + 1 + strlen(path) + 1;
     char edit_cmd[cmd_len];
 
     snprintf(edit_cmd, cmd_len, "%s %s", editor_name, path);
@@ -272,7 +248,7 @@ void open_tmp_file_in_editor(const char *path)
     system(edit_cmd);
 }
 
-void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
+void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], const int keyarr[], int keyarr_len)
 {
     const int max_str_len = 500;
     char cur_str[max_str_len], *read_ptr = "";
@@ -287,12 +263,13 @@ void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], in
 
         if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
+            // replace newline with null byte
             cur_str[strlen(cur_str) - 1] = '\0';
 
             cur_key = keyarr[i];
             free(map[cur_key]->dest);
 
-            map[cur_key]->dest = malloc(max_str_len * sizeof(char));
+            map[cur_key]->dest = malloc(max_str_len * sizeof(map[cur_key]->dest));
             if (map[cur_key]->dest == NULL)
             {
                 fprintf(stderr, "mmv: failed to allocate memory for given destination \"%s\"\n", cur_str);
@@ -305,10 +282,11 @@ void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], in
             i++;
         }
     }
+
     fclose(tmp_fptr);
 }
 
-void rename_files(struct StrPairNode *map[], const int keyarr[], const int keyarr_len)
+void rename_files(struct StrPairNode *map[], const int keyarr[], int keyarr_len)
 {
     int i;
 
@@ -325,7 +303,7 @@ void rename_files(struct StrPairNode *map[], const int keyarr[], const int keyar
     }
 }
 
-void rename_path_pair(char *src, char *dest)
+void rename_path_pair(const char *src, const char *dest)
 {
     int rename_result = rename(src, dest);
 
@@ -341,7 +319,7 @@ void rm_path(char *path)
         fprintf(stderr, "mmv: failed to delete \"%s\"\n", path);
 }
 
-void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], int keys[], const int num_keys)
+void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], const int keys[], int num_keys)
 {
     int i;
     struct StrPairNode *wkg_node;
@@ -358,7 +336,7 @@ void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], int keys[], const 
     }
 }
 
-void write_old_names_to_tmp_file(char tmp_path[], struct StrPairNode *map[], int keyarr[], int keyarr_len)
+void write_old_names_to_tmp_file(char tmp_path[], struct StrPairNode *map[], const int keyarr[], int keyarr_len)
 {
     FILE *tmp_fptr = get_tmp_path_fptr(tmp_path);
     write_map_to_fptr(tmp_fptr, map, keyarr, keyarr_len);
