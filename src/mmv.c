@@ -14,13 +14,13 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // disallow group and other from accessing created files
-    umask(077);
-
     char tmp_path[] = "/tmp/mmv_XXXXXX";
-    int hash, i, keyarr[argc], keyarr_len = 0;
+    int hash, i;
     const int map_size = (6 * (argc - 1)) + 1;
+    struct MapKeyArr *keys = malloc(sizeof(struct MapKeyArr) + ((unsigned int)(argc - 1) * sizeof(int)));
     struct StrPairNode *map[map_size];
+
+    keys->num_keys = 0;
 
     for (i = 0; i < map_size; i++)
         map[i] = NULL;
@@ -32,22 +32,27 @@ int main(int argc, char *argv[])
 
         if (hash != -1)
         {
-            keyarr[keyarr_len] = hash;
-            keyarr_len++;
+            keys->keyarr[keys->num_keys] = hash;
+            (keys->num_keys)++;
         }
     }
 
-    write_old_names_to_tmp_file(tmp_path, map, keyarr, keyarr_len);
+    // disallow anyone but user from accessing created files
+    umask(077);
+
+    write_old_names_to_tmp_file(tmp_path, map, keys);
 
     open_tmp_file_in_editor(tmp_path);
 
-    read_new_names_from_tmp_file(tmp_path, map, keyarr, keyarr_len);
+    read_new_names_from_tmp_file(tmp_path, map, keys);
 
     rm_path(tmp_path);
 
-    rename_files(map, keyarr, keyarr_len);
+    rename_files(map, keys);
 
-    free_map(map, keyarr, keyarr_len);
+    free_map(map, keys);
+
+    free(keys);
 
     return EXIT_SUCCESS;
 }
@@ -147,8 +152,8 @@ int get_fnv_32a_str_hash(char *str, int map_size)
 void free_map(struct StrPairNode *map[], struct MapKeyArr *keys)
 {
     int i;
-    for (i = 0; i < keyarr_len; i++)
-        free_pair_ll(map[keyarr[i]]);
+    for (i = 0; i < keys->num_keys; i++)
+        free_pair_ll(map[keys->keyarr[i]]);
 }
 
 /**
@@ -297,7 +302,7 @@ void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], st
 
     open_file(tmp_path, "r", &tmp_fptr);
 
-    while (read_ptr != NULL && i < keyarr_len)
+    while (read_ptr != NULL && i < keys->num_keys)
     {
         read_ptr = fgets(cur_str, max_str_len, tmp_fptr);
 
@@ -306,7 +311,7 @@ void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], st
             // replace newline with null byte
             cur_str[strlen(cur_str) - 1] = '\0';
 
-            cur_key = keyarr[i];
+            cur_key = keys->keyarr[i];
             free(map[cur_key]->dest);
 
             map[cur_key]->dest = malloc(max_str_len * sizeof(map[cur_key]->dest));
@@ -337,9 +342,9 @@ void rename_files(struct StrPairNode *map[], struct MapKeyArr *keys)
 {
     int i;
 
-    for (i = 0; i < keyarr_len; i++)
+    for (i = 0; i < keys->num_keys; i++)
     {
-        struct StrPairNode *wkg_node = map[keyarr[i]];
+        struct StrPairNode *wkg_node = map[keys->keyarr[i]];
 
         while (wkg_node != NULL)
         {
@@ -392,9 +397,9 @@ void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], struct MapKeyArr *
     int i;
     struct StrPairNode *wkg_node;
 
-    for (i = 0; i < num_keys; i++)
+    for (i = 0; i < keys->num_keys; i++)
     {
-        wkg_node = map[keys[i]];
+        wkg_node = map[keys->keyarr[i]];
 
         while (wkg_node != NULL)
         {
@@ -415,8 +420,11 @@ void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], struct MapKeyArr *
  */
 void write_old_names_to_tmp_file(char path[], struct StrPairNode *map[], struct MapKeyArr *keys)
 {
-    FILE *tmp_fptr = get_tmp_path_fptr(tmp_path);
-    write_map_to_fptr(tmp_fptr, map, keyarr, keyarr_len);
+    FILE *tmp_fptr;
+
+    tmp_fptr = get_tmp_path_fptr(path);
+
+    write_map_to_fptr(tmp_fptr, map, keys);
     // there is no corresponding explicit fopen() call for this
     // fclose() because mkstemp in get_tmp_path_fptr() opens
     // temp file for us
