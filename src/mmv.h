@@ -17,7 +17,7 @@ struct StrPairNode
 
 struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, const char *new_src);
 int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_size);
-Fnv32_t get_fnv_32a_str_hash(char *str, int map_size);
+int get_fnv_32a_str_hash(char *str, int map_size);
 void free_map(struct StrPairNode *map[], const int keyarr[], int keyarr_len);
 void free_pair_ll(struct StrPairNode *node);
 FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path);

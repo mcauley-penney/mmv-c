@@ -41,8 +41,6 @@ int main(int argc, char *argv[])
     // disallow group and other from accessing created files
     umask(077);
 
-    // use variable (instead of, maybe, macro) because this string will be
-    // modified in place and reused
     char tmp_path[] = "/tmp/mmv_XXXXXX";
     int hash, i, keyarr[argc], keyarr_len = 0;
     const int map_size = (6 * (argc - 1)) + 1;
@@ -109,9 +107,10 @@ int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_siz
     return hash_to_insert;
 }
 
-Fnv32_t get_fnv_32a_str_hash(char *str, int map_size)
+int get_fnv_32a_str_hash(char *str, int map_size)
 {
-    Fnv32_t hval = ((Fnv32_t)0x811c9dc5);
+    Fnv32_t hval = ((Fnv32_t)0x811c9dc5), unsigned_hash;
+    ;
     unsigned char *s = (unsigned char *)str; /* unsigned string */
 
     // FNV-1a hash each octet in the buffer
@@ -124,7 +123,14 @@ Fnv32_t get_fnv_32a_str_hash(char *str, int map_size)
         hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
     }
 
-    return hval % map_size;
+    // map size is a signed int guaranteed to be positive. We
+    // want our hval, an unsigned int, to become a positive
+    // value within the range of an int. We can safely cast
+    // our map size to an unsigned int and perform modulo,
+    // granting us an unsigned int in the range of int
+    unsigned_hash = hval % (Fnv32_t)map_size;
+
+    return (int)unsigned_hash;
 }
 
 void free_map(struct StrPairNode *map[], const int keyarr[], int keyarr_len)
@@ -250,7 +256,7 @@ void open_tmp_file_in_editor(const char *path)
 
 void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], const int keyarr[], int keyarr_len)
 {
-    const int max_str_len = 500;
+    const unsigned int max_str_len = 500;
     char cur_str[max_str_len], *read_ptr = "";
     FILE *tmp_fptr;
     int cur_key, i = 0;

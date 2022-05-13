@@ -6,10 +6,10 @@ src_files = $(notdir $(wildcard $(src_dir)/*.c)) # src files without dir prefix
 VPATH = $(src_dir) # where to look for src files
 
 # flags
-general = -pipe -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wsuggest-attribute=malloc
+general = -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wsuggest-attribute=malloc
 optim = -O2
-warn_basic = -Wall -Wextra
-warn_extra = -pedantic -Wdouble-promotion -Wfloat-equal -Wpadded
+warn_basic = -pedantic -Wall -Wextra
+warn_extra = -Wcast-align=strict -Wconversion -Wdouble-promotion -Wfloat-equal -Wpadded -Wshadow -Wstrict-prototypes
 warn_format = -Wformat=2 -Wformat-overflow=2 -Wformat-truncation
 warn = $(warn_basic) $(warn_extra) $(warn_format)
 
