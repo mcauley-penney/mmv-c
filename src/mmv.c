@@ -1,31 +1,7 @@
 /**
- * read and improve:
- *  • https://wiki.sei.cmu.edu/confluence/display/c/SEI+CERT+C+Coding+Standard
- *  • https://security.web.cern.ch/recommendations/en/codetools/c.shtml
- *  • https://resources.sei.cmu.edu/asset_files/Presentation/2016_017_101_484207.pdf
- *      • investigate:
- *          • ferror
- *  • https://wiki.sei.cmu.edu/confluence/
- *
- * https://wiki.sei.cmu.edu/confluence/display/c/MEM12-C.+Consider+using+a+goto+chain+when+leaving+a+function+on+error+when+using+and+releasing+resources
- *
- * 2. optimization
- *      • mem optimization by Christer Ericson
- *          • https://www.gdcvault.com/play/1022689/Memory
- *          • lukasz.dk/mirror/research-scea/research/pdfs/GDC2003_Memory_Optimization_18Mar03.pdf
- *
- * 4. produce documentation
- *      • in .c for maintainers (that's me!), in .h for external users
- *
- * 6. make param names uniform, e.g. arg_count vs arr_len, etc.
- * 7. enforce C naming conventions
- *
- */
-
-/**
  *  Title       : mmv.c
  *  Description : interactively move or rename files and directories
- *  Author      : Jacob Penney
+ *  Author      : JMP
  */
 
 #include "mmv.h"
@@ -76,6 +52,17 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
+/**
+ * @brief recursively add or reject a node from linked list of string
+ * pair nodes
+ *
+ * @param cur_node: working node in iteration across linked list
+ * @param new_src: source string (old name) to give to new node; will
+ *      be rejected if a node is found to already contain it
+ *
+ * @return NULL or new node; if new node, new node is appended to end
+ *      of linked list
+ */
 struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, const char *new_src)
 {
     // if current node is null, insert new node at current position
@@ -91,6 +78,16 @@ struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, const char *n
     return cur_node;
 }
 
+/**
+ * @brief attempt to add a source string to hashmap of string pair
+ *      nodes as a new node
+ *
+ * @param str: string to hash and add to map
+ * @param map: map of string pair nodes to add string to
+ * @param map_size: current size of the map
+ *
+ * @return hash where new node was inserted; -1 if key already exists
+ */
 int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_size)
 {
     int hash = get_fnv_32a_str_hash(str, map_size);
@@ -107,6 +104,14 @@ int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_siz
     return hash_to_insert;
 }
 
+/**
+ * @brief hash a string with Fowler–Noll–Vo 1a 32bit hash
+ *
+ * @param str: string to hash
+ * @param map_size: size of map; used to modulo the hash to fit into array
+ *
+ * @return hash after modulo
+ */
 int get_fnv_32a_str_hash(char *str, int map_size)
 {
     Fnv32_t hval = ((Fnv32_t)0x811c9dc5), unsigned_hash;
@@ -133,13 +138,24 @@ int get_fnv_32a_str_hash(char *str, int map_size)
     return (int)unsigned_hash;
 }
 
-void free_map(struct StrPairNode *map[], const int keyarr[], int keyarr_len)
+/**
+ * @brief free map of string pair nodes
+ *
+ * @param map: map to free
+ * @param keys: struct containing list of keys where nodes exist
+ */
+void free_map(struct StrPairNode *map[], struct MapKeyArr *keys)
 {
     int i;
     for (i = 0; i < keyarr_len; i++)
         free_pair_ll(map[keyarr[i]]);
 }
 
+/**
+ * @brief recursively free all nodes in a linked list
+ *
+ * @param node: working node in recursion across linked list
+ */
 void free_pair_ll(struct StrPairNode *node)
 {
     if (node != NULL)
@@ -151,7 +167,13 @@ void free_pair_ll(struct StrPairNode *node)
         free(node);
     }
 }
-
+/**
+ * @brief open given path and get its file pointer
+ *
+ * @param tmp_path: string of file path to open
+ *
+ * @return file pointer to opened path
+ */
 FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
 {
     FILE *fptr;
@@ -175,6 +197,14 @@ FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
     return fptr;
 }
 
+/**
+ * @brief initialize and return a string pair node
+ *
+ * @param src_str: string to give to node as source (old name) and
+ *      temporarily as destination (new name)
+ *
+ * @return initialized node
+ */
 struct StrPairNode *init_pair_node(const char *src_str)
 {
     const size_t src_len = (strlen(src_str) + 1) * sizeof(char);
@@ -209,23 +239,13 @@ struct StrPairNode *init_pair_node(const char *src_str)
     return new_node;
 }
 
-int map_find_src_pos(struct StrPairNode *map[], int hash, const char *str)
-{
-    int i;
-    struct StrPairNode *wkg_node = map[hash];
-
-    // access map at key
-    for (i = 0; wkg_node != NULL; i++)
-    {
-        if (strcmp(str, wkg_node->src) == 0)
-            return i;
-
-        wkg_node = wkg_node->next;
-    }
-
-    return -1;
-}
-
+/**
+ * @brief open a file, given a mode and path to the file
+ *
+ * @param path: file path to open
+ * @param mode: mode to open file in
+ * @param **fptr: out param, holds opened file
+ */
 void open_file(char *path, const char *mode, FILE **fptr)
 {
     *fptr = fopen(path, mode);
@@ -238,6 +258,11 @@ void open_file(char *path, const char *mode, FILE **fptr)
     }
 }
 
+/**
+ * @brief get the user's $EDITOR env variable and open temp file with it
+ *
+ * @param path: file path to open in editor
+ */
 void open_tmp_file_in_editor(const char *path)
 {
     char *editor_name = getenv("EDITOR");
@@ -254,7 +279,16 @@ void open_tmp_file_in_editor(const char *path)
     system(edit_cmd);
 }
 
-void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], const int keyarr[], int keyarr_len)
+/**
+ * @brief read lines out of a file path and store them in hashmap
+ *      of string pair nodes as destination (new name) strings
+ *
+ * @param tmp_path: path to open and read lines from
+ * @param map: map to store retrieved strings in
+ * @param keys: struct containing list of keys of locations of
+ *      string pair nodes in hashmap
+ */
+void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], struct MapKeyArr *keys)
 {
     const unsigned int max_str_len = 500;
     char cur_str[max_str_len], *read_ptr = "";
@@ -292,7 +326,14 @@ void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], co
     fclose(tmp_fptr);
 }
 
-void rename_files(struct StrPairNode *map[], const int keyarr[], int keyarr_len)
+/**
+ * @brief iterate over hashmap of name pairs using list of keys and
+ *      change sources (old names) to destinations (new names)
+ *
+ * @param map: hashmap of old and new names
+ * @param keys: struct containing list of keys to nodes in hashmap
+ */
+void rename_files(struct StrPairNode *map[], struct MapKeyArr *keys)
 {
     int i;
 
@@ -309,6 +350,12 @@ void rename_files(struct StrPairNode *map[], const int keyarr[], int keyarr_len)
     }
 }
 
+/**
+ * @brief rename an item in file system
+ *
+ * @param src: old name
+ * @param dest: new name
+ */
 void rename_path_pair(const char *src, const char *dest)
 {
     int rename_result = rename(src, dest);
@@ -317,6 +364,11 @@ void rename_path_pair(const char *src, const char *dest)
         fprintf(stderr, "mmv: failed to rename \"%s\" to \"%s\"\n", src, dest);
 }
 
+/**
+ * @brief delete an item at the given path in the file system
+ *
+ * @param path: path to item to delete
+ */
 void rm_path(char *path)
 {
     int rm_success = remove(path);
@@ -325,7 +377,17 @@ void rm_path(char *path)
         fprintf(stderr, "mmv: failed to delete \"%s\"\n", path);
 }
 
-void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], const int keys[], int num_keys)
+/**
+ * @brief iterate over map of nodes containing item names to rename
+ *      and write said names to the given file pointer
+ *
+ * @param fptr: pointer to open file to write to
+ * @param map: map of string pair nodes, contains old names to write
+ *      to fptr
+ * @param keys: struct containing list of keys to node locations in
+ *      hashmap
+ */
+void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], struct MapKeyArr *keys)
 {
     int i;
     struct StrPairNode *wkg_node;
@@ -342,7 +404,16 @@ void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], const int keys[], 
     }
 }
 
-void write_old_names_to_tmp_file(char tmp_path[], struct StrPairNode *map[], const int keyarr[], int keyarr_len)
+/**
+ * @brief open temp file at path, write source strings (old names)
+ *      to it, and close said temp file
+ *
+ * @param path: path to open and write to
+ * @param map: map of source strings to write
+ * @param keys: struct containing list of keys to node locations in
+ *      hashmap
+ */
+void write_old_names_to_tmp_file(char path[], struct StrPairNode *map[], struct MapKeyArr *keys)
 {
     FILE *tmp_fptr = get_tmp_path_fptr(tmp_path);
     write_map_to_fptr(tmp_fptr, map, keyarr, keyarr_len);
