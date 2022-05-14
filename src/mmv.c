@@ -76,7 +76,7 @@ struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, const char *n
 
     // if the str at the current node matches the new str, do nothing
     if (strcmp(cur_node->src, new_src) == 0)
-        return NULL;
+        return cur_node;
 
     cur_node->next = add_strpair_node(cur_node->next, new_src);
 
