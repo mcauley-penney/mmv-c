@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     int hash, i;
     const int map_size = (6 * (argc - 1)) + 1;
     struct MapKeyArr *keys = malloc(sizeof(struct MapKeyArr) + ((unsigned int)(argc - 1) * sizeof(int)));
-    struct StrPairNode *map[map_size];
+    struct StrPairNode **map = malloc((unsigned int)map_size * sizeof(struct StrPairNode));
 
     keys->num_keys = 0;
 
@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
 
     rename_files(map, keys);
 
-    free_map(map, keys);
-
+    free_map_nodes(map, keys);
+    free(map);
     free(keys);
 
     return EXIT_SUCCESS;
@@ -230,18 +230,19 @@ void open_tmp_file_in_editor(const char *path)
         editor_name = "nano";
 
     const size_t cmd_len = strlen(editor_name) + 1 + strlen(path) + 1;
-    char edit_cmd[cmd_len];
+    char *edit_cmd = malloc(cmd_len * sizeof(edit_cmd));
 
     snprintf(edit_cmd, cmd_len, "%s %s", editor_name, path);
 
     // open temporary file containing argv using editor of choice
     system(edit_cmd);
+
+    free(edit_cmd);
 }
 
 void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], struct MapKeyArr *keys)
 {
-    const unsigned int max_str_len = 500;
-    char cur_str[max_str_len], *read_ptr = "";
+    char cur_str[NAME_MAX], *read_ptr = "";
     FILE *tmp_fptr;
     int cur_key, i = 0;
 
@@ -249,7 +250,7 @@ void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], st
 
     while (read_ptr != NULL && i < keys->num_keys)
     {
-        read_ptr = fgets(cur_str, max_str_len, tmp_fptr);
+        read_ptr = fgets(cur_str, NAME_MAX, tmp_fptr);
 
         if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
@@ -259,7 +260,7 @@ void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], st
             cur_key = keys->keyarr[i];
             free(map[cur_key]->dest);
 
-            map[cur_key]->dest = malloc(max_str_len * sizeof(map[cur_key]->dest));
+            map[cur_key]->dest = malloc((strlen(cur_str) + 1) * sizeof(map[cur_key]->dest));
             if (map[cur_key]->dest == NULL)
             {
                 fprintf(stderr, "mmv: failed to allocate memory for given destination \"%s\"\n", cur_str);
