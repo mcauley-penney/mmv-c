@@ -22,15 +22,26 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    char tmp_path[] = "/tmp/mmv_XXXXXX";
-    int hash;
-    unsigned int i;
     const unsigned int u_argc = (unsigned int)argc;
-    const unsigned int map_size = (6 * (u_argc - 1)) + 1;
     struct MapKeyArr *keys = malloc(sizeof(struct MapKeyArr) + ((u_argc - 1) * sizeof(int)));
+    if (keys == NULL)
+    {
+        perror("mmv: failed to allocate memory for hash keys struct: ");
+        exit(EXIT_FAILURE);
+    }
+
+    const unsigned int map_size = (6 * (u_argc - 1)) + 1;
     struct StrPairNode **map = malloc(map_size * sizeof(struct StrPairNode));
+    if (map == NULL)
+    {
+        perror("mmv: failed to allocate memory for argv hash map: ");
+        exit(EXIT_FAILURE);
+    }
 
     keys->num_keys = 0;
+
+    int hash;
+    unsigned int i;
 
     for (i = 0; i < map_size; i++)
         map[i] = NULL;
@@ -48,6 +59,7 @@ int main(int argc, char *argv[])
     }
 
     // disallow anyone but user from accessing created files
+    char tmp_path[] = "/tmp/mmv_XXXXXX";
     umask(077);
 
     write_old_names_to_tmp_file(tmp_path, map, keys);
