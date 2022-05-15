@@ -1,21 +1,13 @@
 /**
- *  Title       : mmv.c
+ *  Title       : mmv-c
  *  Description : interactively move or rename files and directories
- *  Author      : JMP
+ *  Author      : Jacob M. Penney
  */
 
 #include "mmv.h"
 
 int main(int argc, char *argv[])
 {
-    // ------------------------------------------------------------------------
-#ifdef TESTING
-    clock_t start, end;
-    double cpu_time_used;
-    start = clock();
-#endif
-    // ------------------------------------------------------------------------
-
     if (argc < 2)
     {
         fprintf(stderr, "mmv: missing file operand\n");
@@ -72,14 +64,6 @@ int main(int argc, char *argv[])
     free_map_nodes(map, keys);
     free(map);
     free(keys);
-
-// ------------------------------------------------------------------------
-#ifdef TESTING
-    end = clock();
-    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf("cpu time: %f\n", cpu_time_used);
-#endif
-    // ------------------------------------------------------------------------
 
     return EXIT_SUCCESS;
 }
@@ -283,6 +267,10 @@ void rename_filesystem_items(char tmp_path[], struct StrPairNode *map[], struct 
 
             wkg_node = wkg_node->next;
 
+            // if the current node is null (meaning that we
+            // reached the end of the linked list at this
+            // index) and the next key is not the last key,
+            // increment.
             if (wkg_node == NULL && i + 1 < keys->num_keys)
             {
                 i++;
