@@ -8,6 +8,14 @@
 
 int main(int argc, char *argv[])
 {
+    // ------------------------------------------------------------------------
+#ifdef TESTING
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
+#endif
+    // ------------------------------------------------------------------------
+
     if (argc < 2)
     {
         fprintf(stderr, "mmv: missing file operand\n");
@@ -15,10 +23,12 @@ int main(int argc, char *argv[])
     }
 
     char tmp_path[] = "/tmp/mmv_XXXXXX";
-    int hash, i;
-    const int map_size = (6 * (argc - 1)) + 1;
-    struct MapKeyArr *keys = malloc(sizeof(struct MapKeyArr) + ((unsigned int)(argc - 1) * sizeof(int)));
-    struct StrPairNode **map = malloc((unsigned int)map_size * sizeof(struct StrPairNode));
+    int hash;
+    unsigned int i;
+    const unsigned int u_argc = (unsigned int)argc;
+    const unsigned int map_size = (6 * (u_argc - 1)) + 1;
+    struct MapKeyArr *keys = malloc(sizeof(struct MapKeyArr) + ((u_argc - 1) * sizeof(int)));
+    struct StrPairNode **map = malloc(map_size * sizeof(struct StrPairNode));
 
     keys->num_keys = 0;
 
@@ -26,7 +36,7 @@ int main(int argc, char *argv[])
         map[i] = NULL;
 
     // start at 1 instead of 0 to avoid reading program invocation
-    for (i = 1; i < argc; i++)
+    for (i = 1; i < u_argc; i++)
     {
         hash = attempt_strnode_map_insert(argv[i], map, map_size);
 
@@ -44,15 +54,20 @@ int main(int argc, char *argv[])
 
     open_tmp_file_in_editor(tmp_path);
 
-    read_new_names_from_tmp_file(tmp_path, map, keys);
+    rename_filesystem_items(tmp_path, map, keys);
 
     rm_path(tmp_path);
-
-    rename_files(map, keys);
-
     free_map_nodes(map, keys);
     free(map);
     free(keys);
+
+// ------------------------------------------------------------------------
+#ifdef TESTING
+    end = clock();
+    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    printf("cpu time: %f\n", cpu_time_used);
+#endif
+    // ------------------------------------------------------------------------
 
     return EXIT_SUCCESS;
 }
@@ -91,12 +106,12 @@ struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, const char *n
     return cur_node;
 }
 
-int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_size)
+int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], unsigned int map_size)
 {
     int hash = get_fnv_32a_str_hash(str, map_size);
 
-    // if hash is already in list of keys, don't add it to list of
-    // keys. Because we use chaining in each hash, we only need to
+    // Don't add hash to list of keys if already present.
+    // Because we use chaining in each hash, we only need to
     // have a list of keys indicating the root of each chain
     int hash_to_insert = map[hash] == NULL ? hash : -1;
 
@@ -105,11 +120,10 @@ int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_siz
     return hash_to_insert;
 }
 
-int get_fnv_32a_str_hash(char *str, int map_size)
+int get_fnv_32a_str_hash(char *str, unsigned int map_size)
 {
-    Fnv32_t hval = ((Fnv32_t)0x811c9dc5), unsigned_hash;
-    ;
     unsigned char *s = (unsigned char *)str; /* unsigned string */
+    Fnv32_t hval = ((Fnv32_t)0x811c9dc5), unsigned_hash;
 
     // FNV-1a hash each octet in the buffer
     while (*s)
@@ -126,12 +140,12 @@ int get_fnv_32a_str_hash(char *str, int map_size)
     // value within the range of an int. We can safely cast
     // our map size to an unsigned int and perform modulo,
     // granting us an unsigned int in the range of int
-    unsigned_hash = hval % (Fnv32_t)map_size;
+    unsigned_hash = hval % map_size;
 
     return (int)unsigned_hash;
 }
 
-void free_map(struct StrPairNode *map[], struct MapKeyArr *keys)
+void free_map_nodes(struct StrPairNode *map[], struct MapKeyArr *keys)
 {
     int i;
 
@@ -148,7 +162,6 @@ void free_pair_ll(struct StrPairNode *node)
         free_pair_ll(node->next);
 
         free(node->src);
-        free(node->dest);
         free(node);
     }
 }
@@ -178,8 +191,6 @@ FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
 
 struct StrPairNode *init_pair_node(const char *src_str)
 {
-    const size_t src_len = (strlen(src_str) + 1) * sizeof(char);
-
     struct StrPairNode *new_node = malloc(sizeof(struct StrPairNode));
     if (new_node == NULL)
     {
@@ -187,25 +198,15 @@ struct StrPairNode *init_pair_node(const char *src_str)
         exit(EXIT_FAILURE);
     }
 
-    new_node->src = malloc(src_len);
+    new_node->src = malloc((strlen(src_str) + 1) * sizeof(char));
     if (new_node->src == NULL)
     {
         fprintf(stderr, "mmv: failed to allocate memory for new map node source\n");
         exit(EXIT_FAILURE);
     }
 
-    new_node->dest = malloc(src_len);
-    if (new_node->dest == NULL)
-    {
-        fprintf(stderr, "mmv: failed to allocate memory for new map node destination\n");
-        exit(EXIT_FAILURE);
-    }
-
-    new_node->next = NULL;
-
-    // init dest to same string so that rename may ignore unchanged names
     strcpy(new_node->src, src_str);
-    strcpy(new_node->dest, src_str);
+    new_node->next = NULL;
 
     return new_node;
 }
@@ -240,11 +241,12 @@ void open_tmp_file_in_editor(const char *path)
     free(edit_cmd);
 }
 
-void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], struct MapKeyArr *keys)
+void rename_filesystem_items(char tmp_path[], struct StrPairNode *map[], struct MapKeyArr *keys)
 {
     char cur_str[NAME_MAX], *read_ptr = "";
     FILE *tmp_fptr;
-    int cur_key, i = 0;
+    int i = 0, *keyarr = keys->keyarr;
+    struct StrPairNode *wkg_node = map[keyarr[i]];
 
     open_file(tmp_path, "r", &tmp_fptr);
 
@@ -252,46 +254,27 @@ void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], st
     {
         read_ptr = fgets(cur_str, NAME_MAX, tmp_fptr);
 
+        // only proceed with iteration if the current string
+        // isn't just a newline
         if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
-            // replace newline with null byte
+            // fgets is guaranteed to return a string with a
+            // newline. Replace it with null byte
             cur_str[strlen(cur_str) - 1] = '\0';
 
-            cur_key = keys->keyarr[i];
-            free(map[cur_key]->dest);
+            rename_path_pair(wkg_node->src, cur_str);
 
-            map[cur_key]->dest = malloc((strlen(cur_str) + 1) * sizeof(map[cur_key]->dest));
-            if (map[cur_key]->dest == NULL)
+            wkg_node = wkg_node->next;
+
+            if (wkg_node == NULL && i + 1 < keys->num_keys)
             {
-                fprintf(stderr, "mmv: failed to allocate memory for given destination \"%s\"\n", cur_str);
-                rm_path(tmp_path);
-                exit(EXIT_FAILURE);
+                i++;
+                wkg_node = map[keyarr[i]];
             }
-
-            strcpy(map[cur_key]->dest, cur_str);
-
-            i++;
         }
     }
 
     fclose(tmp_fptr);
-}
-
-void rename_files(struct StrPairNode *map[], struct MapKeyArr *keys)
-{
-    int i;
-
-    for (i = 0; i < keys->num_keys; i++)
-    {
-        struct StrPairNode *wkg_node = map[keys->keyarr[i]];
-
-        while (wkg_node != NULL)
-        {
-            rename_path_pair(wkg_node->src, wkg_node->dest);
-
-            wkg_node = wkg_node->next;
-        }
-    }
 }
 
 void rename_path_pair(const char *src, const char *dest)

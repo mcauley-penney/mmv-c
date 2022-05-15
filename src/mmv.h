@@ -7,6 +7,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#define TESTING
+
 typedef u_int32_t Fnv32_t;
 
 struct StrPairNode
@@ -45,7 +47,7 @@ struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, const char *n
  *
  * @return hash where new node was inserted; -1 if key already exists
  */
-int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_size);
+int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], unsigned int map_size);
 
 /**
  * @brief hashes a string with the Fowler–Noll–Vo 1a 32bit hash fn
@@ -55,7 +57,7 @@ int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], int map_siz
  *
  * @return hash after modulo
  */
-int get_fnv_32a_str_hash(char *str, int map_size);
+int get_fnv_32a_str_hash(char *str, unsigned int map_size);
 
 /**
  * @brief frees a hashmap of string pair nodes
@@ -63,7 +65,7 @@ int get_fnv_32a_str_hash(char *str, int map_size);
  * @param map: map to free
  * @param keys: struct containing list of keys where nodes exist
  */
-void free_map(struct StrPairNode *map[], struct MapKeyArr *keys);
+void free_map_nodes(struct StrPairNode *map[], struct MapKeyArr *keys);
 
 /**
  * @brief recursively frees all nodes in a linked list
@@ -108,24 +110,18 @@ void open_file(char *path, const char *mode, FILE **fptr);
 void open_tmp_file_in_editor(const char *path);
 
 /**
- * @brief reads lines out of a file path and stores them in hashmap
- *      of string pair nodes as destination (new name) strings
+ * @brief reads lines out of a file path and renames item at corresponding
+ *      position in hashmap to newly-read line.
+ *
+ *  For example, the first item in the hashmap will be renamed to the first
+ *  item read from the file.
  *
  * @param tmp_path: path to open and read lines from
  * @param map: map to store retrieved strings in
  * @param keys: struct containing list of keys of locations of
  *      string pair nodes in hashmap
  */
-void read_new_names_from_tmp_file(char tmp_path[], struct StrPairNode *map[], struct MapKeyArr *keys);
-
-/**
- * @brief iterates over hashmap of name pairs using list of keys and
- *      changes sources (old names) to destinations (new names)
- *
- * @param map: hashmap of old and new names
- * @param keys: struct containing list of keys to nodes in hashmap
- */
-void rename_files(struct StrPairNode *map[], struct MapKeyArr *keys);
+void rename_filesystem_items(char tmp_path[], struct StrPairNode *map[], struct MapKeyArr *keys);
 
 /**
  * @brief renames an item in file system
