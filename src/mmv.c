@@ -173,7 +173,7 @@ FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
 
     if (tmp_fd == -1)
     {
-        fprintf(stderr, "mmv: failed to open \"%s\" as file descriptor\n", tmp_path);
+        fprintf(stderr, "mmv: failed to open \"%s\" as file descriptor: %s\n", tmp_path, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -181,7 +181,7 @@ FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
 
     if (fptr == NULL)
     {
-        fprintf(stderr, "mmv: failed to open \"%s\" as file pointer\n", tmp_path);
+        fprintf(stderr, "mmv: failed to open \"%s\" as file pointer: %s\n", tmp_path, strerror(errno));
         rm_path(tmp_path);
         exit(EXIT_FAILURE);
     }
@@ -194,14 +194,14 @@ struct StrPairNode *init_pair_node(const char *src_str)
     struct StrPairNode *new_node = malloc(sizeof(struct StrPairNode));
     if (new_node == NULL)
     {
-        fprintf(stderr, "mmv: failed to allocate memory for new map node\n");
+        perror("mmv: failed to allocate memory for new map node: ");
         exit(EXIT_FAILURE);
     }
 
     new_node->src = malloc((strlen(src_str) + 1) * sizeof(char));
     if (new_node->src == NULL)
     {
-        fprintf(stderr, "mmv: failed to allocate memory for new map node source\n");
+        perror("mmv: failed to allocate memory for new map node source str: ");
         exit(EXIT_FAILURE);
     }
 
@@ -217,7 +217,7 @@ void open_file(char *path, const char *mode, FILE **fptr)
 
     if (fptr == NULL)
     {
-        fprintf(stderr, "mmv: failed to open \"%s\" in \"%s\" mode\n", path, mode);
+        fprintf(stderr, "mmv: failed to open \"%s\" in \"%s\" mode: %s\n", path, mode, strerror(errno));
         rm_path(path);
         exit(EXIT_FAILURE);
     }
@@ -232,6 +232,11 @@ void open_tmp_file_in_editor(const char *path)
 
     const size_t cmd_len = strlen(editor_name) + 1 + strlen(path) + 1;
     char *edit_cmd = malloc(cmd_len * sizeof(edit_cmd));
+    if (edit_cmd == NULL)
+    {
+        perror("mmv: failed to allocate memory for $EDITOR command: ");
+        exit(EXIT_FAILURE);
+    }
 
     snprintf(edit_cmd, cmd_len, "%s %s", editor_name, path);
 
@@ -282,7 +287,7 @@ void rename_path_pair(const char *src, const char *dest)
     int rename_result = rename(src, dest);
 
     if (rename_result == -1)
-        fprintf(stderr, "mmv: failed to rename \"%s\" to \"%s\"\n", src, dest);
+        fprintf(stderr, "mmv: \'%s\': %s\n", src, strerror(errno));
 }
 
 void rm_path(char *path)
@@ -290,7 +295,7 @@ void rm_path(char *path)
     int rm_success = remove(path);
 
     if (rm_success == -1)
-        fprintf(stderr, "mmv: failed to delete \"%s\"\n", path);
+        fprintf(stderr, "mmv: failed to delete \"%s\": %s\n", path, strerror(errno));
 }
 
 void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], struct MapKeyArr *keys)
