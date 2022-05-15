@@ -2,6 +2,8 @@
 
 Edit file and directory names in `$EDITOR`
 
+![mmv_example](https://user-images.githubusercontent.com/59481467/168492957-ad35e23d-a5d7-4620-8551-1842101ceb73.gif)
+
 
 #### about
 I like and frequently use the functionality of itchyny/mmv but wanted to implement it for myself.
