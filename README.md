@@ -1,31 +1,34 @@
-# mmv.c 📦
+# mmv-c 📦
 
 Edit file and directory names in `$EDITOR`
 
 
-#### features
-
-
-#### specification
-
-
-
 #### about
+I like and frequently use the functionality of itchyny/mmv but wanted to implement it for myself.
+
+This implementation forgoes some of the features of the original that I don't want, such as cyclical renaming. See it for a more featureful experience.
+
+
+#### installation
+
+1. Clone this repository and enter the repo directory
+2. Issue `make`, then `sudo make install`
+3. Feel free to remove the cloned repo
+
+In all:
+```
+git clone https://github.com/mcauley-penney/mmv.c.git
+cd mmv.c
+make
+sudo make install
+cd ..
+sudo rm -r mmv.c
+```
+
+
 ##### credit
-[itchyny/mmv](https://github.com/itchyny/mmv): for introducing me to this modern [mmv](https://www.systutorials.com/docs/linux/man/1-mmv/) alternative
+[itchyny/mmv](https://github.com/itchyny/mmv)
 
-[Glenn Fowler, Landon Curt Noll, and Kiem-Phong Vo](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function): the authors of the FNV hash algorithm
+[Glenn Fowler, Landon Curt Noll, and Kiem-Phong Vo](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function)
 
-[Mike Parker, David MacKenzie, Jim Meyering, and all of the contributors to coreutils/mv](https://github.com/coreutils/coreutils/blob/master/src/mv.c): the OG's themselves
-
-
-##### research
-Hashing algorithms:
-1. [Introductory resource discussing various hashing algorithms](https://softwareengineering.stackexchange.com/questions/49550/which-hashing-algorithm-is-best-for-uniqueness-and-speed)
-2. [FNV Hash calculator, used for verifying correctness of algorithm](https://fnvhash.github.io/fnv-calculator-online/)
-
-Temporary file functionality:
-1. [GNU resource on temporary files](https://www.gnu.org/software/libc/manual/html_node/Temporary-Files.html)
-
-C concepts:
-1. https://stackoverflow.com/questions/232693/including-one-c-source-file-in-another
+[Mike Parker, David MacKenzie, Jim Meyering, and all of the contributors to coreutils/mv](https://github.com/coreutils/coreutils/blob/master/src/mv.c)
