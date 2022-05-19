@@ -143,7 +143,7 @@ int get_fnv_32a_str_hash(char *str, unsigned int map_size)
 
 void free_map_nodes(struct StrPairNode *map[], struct MapKeyArr *keys)
 {
-    int i;
+    size_t i;
 
     // for each position in the hashmap array that has a node,
     // recursively free all nodes connected to it
@@ -246,7 +246,8 @@ void rename_filesystem_items(char tmp_path[], struct StrPairNode *map[], struct 
 {
     char cur_str[NAME_MAX], *read_ptr = "";
     FILE *tmp_fptr;
-    int i = 0, *keyarr = keys->keyarr;
+    int *keyarr = keys->keyarr;
+    size_t i = 0;
     struct StrPairNode *wkg_node = map[keyarr[i]];
 
     open_file(tmp_path, "r", &tmp_fptr);
@@ -300,7 +301,7 @@ void rm_path(char *path)
 
 void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], struct MapKeyArr *keys)
 {
-    int i;
+    size_t i;
     struct StrPairNode *wkg_node;
 
     for (i = 0; i < keys->num_keys; i++)

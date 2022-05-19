@@ -19,7 +19,7 @@ struct StrPairNode
 
 struct MapKeyArr
 {
-    int num_keys;
+    size_t num_keys;
     int keyarr[];
 };
 
