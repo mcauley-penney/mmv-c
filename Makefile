@@ -1,3 +1,5 @@
+# GCC Options: https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html
+
 # files
 bin = mmv # output binary name
 bindir = /usr/bin/
@@ -7,11 +9,12 @@ VPATH = $(src_dir) # where to look for src files
 
 # flags
 optim = -O2
+w-arith = -Wdouble-promotion -Wfloat-equal
 w-basic = -pedantic -Wall -Wextra
-w-extra = -Wcast-align=strict -Wconversion -Wdouble-promotion -Wfloat-equal -Wpadded -Wshadow -Wstrict-prototypes -Wvla
+w-extra = -Wcast-align=strict -Wconversion -Wpadded -Wshadow -Wstrict-prototypes -Wvla
 w-fmt = -Wformat=2 -Wformat-overflow=2 -Wformat-truncation
 w-sgst = -Wsuggest-attribute=const -Wsuggest-attribute=malloc -Wsuggest-attribute=noreturn
-warn = $(w-basic) $(w-extra) $(w-fmt) $(w-sgst)
+warn = $(w-basic) $(w-extra) $(w-arith) $(w-fmt) $(w-sgst)
 
 CFLAGS = $(warn) -c $(optim)
 LFLAGS = $(warn)
@@ -35,7 +38,7 @@ $(bin): $(obj_files)
 
 # install target for "sudo make install"
 install:
-	install -m 557 $(bin) $(bindir)
+	install -m 007 $(bin) $(bindir)
 
 
 # clean target: remove all object files and binary

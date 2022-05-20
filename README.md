@@ -1,14 +1,11 @@
 # mmv-c 📦
 
-Edit file and directory names in `$EDITOR`
-
-![mmv_example](https://user-images.githubusercontent.com/59481467/168492957-ad35e23d-a5d7-4620-8551-1842101ceb73.gif)
+Edit file and directory names in `$EDITOR`. Inspired by [itchyny/mmv](https://github.com/itchyny/mmv).
 
 
-#### about
-I like and frequently use the functionality of itchyny/mmv but wanted to implement it for myself.
+#### usage
 
-This implementation forgoes some of the features of the original that I don't want, such as cyclical renaming. See it for a more featureful experience.
+Like other command line tools, `mmv` accepts wildcards and special paths, such as `..`
 
 
 #### installation
@@ -26,6 +23,11 @@ sudo make install
 cd ..
 sudo rm -r mmv.c
 ```
+
+#### about
+I like and frequently use the base functionality of the original, linked above. I've implemented something like it before [in shell](https://github.com/mcauley-penney/mmv.sh) and wanted to try my hand at a C implementation.
+
+This version forgoes some of the features of the original that I don't use and don't need, such as cyclical renaming. See it for a more featureful experience.
 
 
 ##### credit

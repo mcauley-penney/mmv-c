@@ -1,6 +1,6 @@
 /**
  *  Title       : mmv-c
- *  Description : interactively move or rename files and directories
+ *  Description : interactively move files and directories
  *  Author      : Jacob M. Penney
  */
 
@@ -8,47 +8,20 @@
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
-    {
-        fprintf(stderr, "mmv: missing file operand\n");
-        exit(EXIT_FAILURE);
-    }
+    // ------------------------------------------------------------------------
+#ifdef TESTING
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
+#endif
+    // ------------------------------------------------------------------------
 
-    const unsigned int u_argc = (unsigned int)argc;
-    struct MapKeyArr *keys = malloc(sizeof(struct MapKeyArr) + ((u_argc - 1) * sizeof(int)));
-    if (keys == NULL)
-    {
-        perror("mmv: failed to allocate memory for hash keys struct: ");
-        exit(EXIT_FAILURE);
-    }
+    sanitize_num_args(&argc);
 
-    const unsigned int map_size = (6 * (u_argc - 1)) + 1;
-    struct StrPairNode **map = malloc(map_size * sizeof(struct StrPairNode));
-    if (map == NULL)
-    {
-        perror("mmv: failed to allocate memory for argv hash map: ");
-        exit(EXIT_FAILURE);
-    }
+    struct MapKeyArr *keys = NULL;
+    char **map = NULL;
 
-    keys->num_keys = 0;
-
-    int hash;
-    unsigned int i;
-
-    for (i = 0; i < map_size; i++)
-        map[i] = NULL;
-
-    // start at 1 instead of 0 to avoid reading program invocation
-    for (i = 1; i < u_argc; i++)
-    {
-        hash = attempt_strnode_map_insert(argv[i], map, map_size);
-
-        if (hash != -1)
-        {
-            keys->keyarr[keys->num_keys] = hash;
-            (keys->num_keys)++;
-        }
-    }
+    make_argv_hashmap(argv, argc, &map, &keys);
 
     // disallow anyone but user from accessing created files
     char tmp_path[] = "/tmp/mmv_XXXXXX";
@@ -65,61 +38,21 @@ int main(int argc, char *argv[])
     free(map);
     free(keys);
 
+// ------------------------------------------------------------------------
+#ifdef TESTING
+    end = clock();
+    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    printf("cpu time: %f\n", cpu_time_used);
+#endif
+    // ------------------------------------------------------------------------
+
     return EXIT_SUCCESS;
 }
 
-/**
- * When given a source string, this function will recursively
- * attempt to place that string in a newly-created node at the
- * end of the linked list of nodes attached to the given node
- * parameter.
- *
- * If the current node is NULL, a new node is created and the
- * string is placed as the source member of that node. If,
- * during the process of searching for the end of the linked
- * list, a node with the same source string is found, the
- * function simply "reattaches" the current node and exits.
- * This disallows nodes with the same source string in the
- * map, eliminating populating the temporary renaming buffer
- * with duplicate items. For example, if the user passes the
- * same file name to mmv multiple times, this will stop those
- * duplicates from propagating into the temporary renaming
- * buffer.
- */
-struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, const char *new_src)
-{
-    // if current node is null, insert new node at current position
-    // by returning the newly created node as node->next
-    if (cur_node == NULL)
-        return init_pair_node(new_src);
-
-    // if the str at the current node matches the new str, do nothing
-    if (strcmp(cur_node->src, new_src) == 0)
-        return cur_node;
-
-    cur_node->next = add_strpair_node(cur_node->next, new_src);
-
-    return cur_node;
-}
-
-int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], unsigned int map_size)
-{
-    int hash = get_fnv_32a_str_hash(str, map_size);
-
-    // Don't add hash to list of keys if already present.
-    // Because we use chaining in each hash, we only need to
-    // have a list of keys indicating the root of each chain
-    int hash_to_insert = map[hash] == NULL ? hash : -1;
-
-    map[hash] = add_strpair_node(map[hash], str);
-
-    return hash_to_insert;
-}
-
-int get_fnv_32a_str_hash(char *str, unsigned int map_size)
+unsigned int get_fnv_32a_str_hash(char *str, const unsigned int map_size)
 {
     unsigned char *s = (unsigned char *)str; /* unsigned string */
-    Fnv32_t hval = ((Fnv32_t)0x811c9dc5), unsigned_hash;
+    Fnv32_t hval = ((Fnv32_t)0x811c9dc5);
 
     // FNV-1a hash each octet in the buffer
     while (*s)
@@ -131,35 +64,14 @@ int get_fnv_32a_str_hash(char *str, unsigned int map_size)
         hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
     }
 
-    // map size is a signed int guaranteed to be positive. We
-    // want our hval, an unsigned int, to become a positive
-    // value within the range of an int. We can safely cast
-    // our map size to an unsigned int and perform modulo,
-    // granting us an unsigned int in the range of int
-    unsigned_hash = hval % map_size;
-
-    return (int)unsigned_hash;
+    return hval % map_size;
 }
 
-void free_map_nodes(struct StrPairNode *map[], struct MapKeyArr *keys)
+void free_map_nodes(char *map[], struct MapKeyArr *keys)
 {
     size_t i;
-
-    // for each position in the hashmap array that has a node,
-    // recursively free all nodes connected to it
     for (i = 0; i < keys->num_keys; i++)
-        free_pair_ll(map[keys->keyarr[i]]);
-}
-
-void free_pair_ll(struct StrPairNode *node)
-{
-    if (node != NULL)
-    {
-        free_pair_ll(node->next);
-
-        free(node->src);
-        free(node);
-    }
+        free(map[keys->keyarr[i]]);
 }
 
 FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
@@ -185,26 +97,73 @@ FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path)
     return fptr;
 }
 
-struct StrPairNode *init_pair_node(const char *src_str)
+void init_hashmap_objs(const unsigned int num_args, const unsigned int map_size, char ***map, struct MapKeyArr **keys)
 {
-    struct StrPairNode *new_node = malloc(sizeof(struct StrPairNode));
-    if (new_node == NULL)
+    unsigned int i;
+
+    // struct with FAM must be malloced and size of FAM must be included
+    *keys = malloc(sizeof(struct MapKeyArr) + (num_args - 1) * sizeof(int));
+    if ((*keys) == NULL)
     {
-        perror("mmv: failed to allocate memory for new map node: ");
+        perror("mmv: failed to allocate memory for hash keys struct: ");
         exit(EXIT_FAILURE);
     }
 
-    new_node->src = malloc((strlen(src_str) + 1) * sizeof(char));
-    if (new_node->src == NULL)
+    // calloc for hashmap array because we would like to be able to
+    // dynamically assign array size but avoid VLA. Calloc is superior
+    // to malloc for this application.
+    *map = calloc(map_size, sizeof(char *));
+    if ((*map) == NULL)
+    {
+        perror("mmv: failed to allocate memory for argv hash map: ");
+        exit(EXIT_FAILURE);
+    }
+
+    (*keys)->num_keys = 0;
+
+    for (i = 0; i < map_size; i++)
+        (*map)[i] = NULL;
+}
+
+void init_node_src(char **array_pos, const char *src_str)
+{
+    *array_pos = malloc((strlen(src_str) + 1) * sizeof(char));
+
+    if (array_pos == NULL)
     {
         perror("mmv: failed to allocate memory for new map node source str: ");
         exit(EXIT_FAILURE);
     }
 
-    strcpy(new_node->src, src_str);
-    new_node->next = NULL;
+    strcpy(*array_pos, src_str);
+}
 
-    return new_node;
+void make_argv_hashmap(char *argv[], int argc, char ***map, struct MapKeyArr **keys)
+{
+    const unsigned int u_argc = (unsigned int)argc;
+    const unsigned int map_size = (6 * (u_argc - 1)) + 1;
+
+    init_hashmap_objs(u_argc, map_size, map, keys);
+
+    char *cur_str = NULL;
+    int dupe_found;
+    unsigned int i, hash;
+
+    // start at 1 instead of 0 to avoid reading program invocation
+    for (i = 1; i < u_argc; i++)
+    {
+        cur_str = argv[i];
+        hash = get_fnv_32a_str_hash(cur_str, map_size);
+
+        dupe_found = probe_for_null_hashpos(map, map_size, cur_str, &hash);
+
+        if (dupe_found != 0)
+        {
+            init_node_src(&(*map)[hash], cur_str);
+            (*keys)->keyarr[(*keys)->num_keys] = hash;
+            (*keys)->num_keys++;
+        }
+    }
 }
 
 void open_file(char *path, const char *mode, FILE **fptr)
@@ -242,13 +201,33 @@ void open_tmp_file_in_editor(const char *path)
     free(edit_cmd);
 }
 
-void rename_filesystem_items(char tmp_path[], struct StrPairNode *map[], struct MapKeyArr *keys)
+int probe_for_null_hashpos(char ***map, const unsigned int map_size, const char *cur_str, unsigned int *hash)
+{
+    char **deref_map = *map;
+    int dupe_found = -1;
+    unsigned int hash_cp = *hash;
+
+    while (deref_map[hash_cp] != NULL && dupe_found != 0)
+    {
+        dupe_found = strcmp(deref_map[hash_cp], cur_str);
+
+        if (hash_cp + 1 == map_size)
+            hash_cp = 0;
+        else
+            hash_cp++;
+    }
+
+    *hash = hash_cp;
+
+    return dupe_found;
+}
+
+void rename_filesystem_items(char tmp_path[], char *map[], struct MapKeyArr *keys)
 {
     char cur_str[NAME_MAX], *read_ptr = "";
     FILE *tmp_fptr;
-    int *keyarr = keys->keyarr;
+    unsigned int *keyarr = keys->keyarr;
     size_t i = 0;
-    struct StrPairNode *wkg_node = map[keyarr[i]];
 
     open_file(tmp_path, "r", &tmp_fptr);
 
@@ -263,20 +242,8 @@ void rename_filesystem_items(char tmp_path[], struct StrPairNode *map[], struct 
             // fgets is guaranteed to return a string with a
             // newline. Replace it with null byte
             cur_str[strlen(cur_str) - 1] = '\0';
-
-            rename_path_pair(wkg_node->src, cur_str);
-
-            wkg_node = wkg_node->next;
-
-            // if the current node is null (meaning that we
-            // reached the end of the linked list at this
-            // index) and the next key is not the last key,
-            // increment.
-            if (wkg_node == NULL && i + 1 < keys->num_keys)
-            {
-                i++;
-                wkg_node = map[keyarr[i]];
-            }
+            rename_path_pair(map[keyarr[i]], cur_str);
+            i++;
         }
     }
 
@@ -299,30 +266,30 @@ void rm_path(char *path)
         fprintf(stderr, "mmv: failed to delete \"%s\": %s\n", path, strerror(errno));
 }
 
-void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], struct MapKeyArr *keys)
+void sanitize_num_args(int *args_len)
 {
-    size_t i;
-    struct StrPairNode *wkg_node;
-
-    for (i = 0; i < keys->num_keys; i++)
+    if (*args_len < 2)
     {
-        wkg_node = map[keys->keyarr[i]];
+        fprintf(stderr, "mmv: missing file operand\n");
+        exit(EXIT_FAILURE);
+    }
 
-        while (wkg_node != NULL)
-        {
-            fprintf(fptr, "%s\n", wkg_node->src);
-            wkg_node = wkg_node->next;
-        }
+    else if (*args_len > ARG_MAX)
+    {
+        *args_len = ARG_MAX;
+        fprintf(stderr, "mmv: only modifying first 10,000 operands\n");
     }
 }
 
-void write_old_names_to_tmp_file(char path[], struct StrPairNode *map[], struct MapKeyArr *keys)
+void write_old_names_to_tmp_file(char path[], char *map[], struct MapKeyArr *keys)
 {
     FILE *tmp_fptr;
+    size_t i;
 
     tmp_fptr = get_tmp_path_fptr(path);
 
-    write_map_to_fptr(tmp_fptr, map, keys);
+    for (i = 0; i < keys->num_keys; i++)
+        fprintf(tmp_fptr, "%s\n", map[keys->keyarr[i]]);
 
     // there is no corresponding explicit fopen() call for this
     // fclose() because mkstemp in get_tmp_path_fptr() opens

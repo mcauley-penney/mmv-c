@@ -6,47 +6,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define ARG_MAX 10001
+
+// TODO: remove -
+#include <time.h>
 #define TESTING
+// --------------
 
 typedef u_int32_t Fnv32_t;
-
-struct StrPairNode
-{
-    char *src;
-    char *dest;
-    struct StrPairNode *next;
-};
 
 struct MapKeyArr
 {
     size_t num_keys;
-    int keyarr[];
+    unsigned int keyarr[];
 };
-
-/**
- * @brief recursively adds or rejects a node from the linked list of string
- * pair nodes found at a hashmap index
- *
- * @param cur_node: working node in iteration across linked list
- * @param new_src: source string (old name) to give to new node; will
- *      be rejected if a node is found to already contain it
- *
- * @return NULL or new node; if new node, new node is appended to end
- *      of linked list
- */
-struct StrPairNode *add_strpair_node(struct StrPairNode *cur_node, const char *new_src);
-
-/**
- * @brief attempts to add a source string to the hashmap of string pair
- *      nodes in a new node
- *
- * @param str: string to hash and add to map
- * @param map: map of string pair nodes to add string to
- * @param map_size: current size of the map
- *
- * @return hash where new node was inserted; -1 if key already exists
- */
-int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], unsigned int map_size);
 
 /**
  * @brief hashes a string with the Fowler–Noll–Vo 1a 32bit hash fn
@@ -56,22 +29,15 @@ int attempt_strnode_map_insert(char *str, struct StrPairNode *map[], unsigned in
  *
  * @return hash after modulo
  */
-int get_fnv_32a_str_hash(char *str, unsigned int map_size);
+unsigned int get_fnv_32a_str_hash(char *str, const unsigned int map_size);
 
 /**
- * @brief frees a hashmap of string pair nodes
+ * @brief frees a hashmap of strings
  *
  * @param map: map to free
  * @param keys: struct containing list of keys where nodes exist
  */
-void free_map_nodes(struct StrPairNode *map[], struct MapKeyArr *keys);
-
-/**
- * @brief recursively frees all nodes in a linked list
- *
- * @param node: working node in recursion across linked list
- */
-void free_pair_ll(struct StrPairNode *node);
+void free_map_nodes(char *map[], struct MapKeyArr *keys);
 
 /**
  * @brief opens the given path and gets its file pointer
@@ -82,15 +48,13 @@ void free_pair_ll(struct StrPairNode *node);
  */
 FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path);
 
-/**
- * @brief initializes and returns a string pair node
- *
- * @param src_str: string to give to node as source (old name) and
- *      temporarily as destination (new name)
- *
- * @return initialized node
- */
-struct StrPairNode *init_pair_node(const char *src_str);
+void init_hashmap_objs(const unsigned int num_args, const unsigned int map_size, char ***map, struct MapKeyArr **keys);
+
+void init_node_src(char **array_pos, const char *src_str);
+
+struct StrNode *init_pair_node(void);
+
+void make_argv_hashmap(char *argv[], int argc, char ***map, struct MapKeyArr **keys);
 
 /**
  * @brief opens a file, given a mode and path to the file
@@ -108,6 +72,8 @@ void open_file(char *path, const char *mode, FILE **fptr);
  */
 void open_tmp_file_in_editor(const char *path);
 
+int probe_for_null_hashpos(char ***map, const unsigned int map_size, const char *cur_str, unsigned int *hash);
+
 /**
  * @brief reads lines out of a file path and renames item at corresponding
  *      position in hashmap to newly-read line.
@@ -120,7 +86,7 @@ void open_tmp_file_in_editor(const char *path);
  * @param keys: struct containing list of keys of locations of
  *      string pair nodes in hashmap
  */
-void rename_filesystem_items(char tmp_path[], struct StrPairNode *map[], struct MapKeyArr *keys);
+void rename_filesystem_items(char tmp_path[], char *map[], struct MapKeyArr *keys);
 
 /**
  * @brief renames an item in file system
@@ -137,6 +103,8 @@ void rename_path_pair(const char *src, const char *dest);
  */
 void rm_path(char *path);
 
+void sanitize_num_args(int *argc);
+
 /**
  * @brief iterates over map of nodes containing item names to rename
  *      and writes said names to the given file pointer
@@ -147,7 +115,7 @@ void rm_path(char *path);
  * @param keys: struct containing list of keys to node locations in
  *      hashmap
  */
-void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], struct MapKeyArr *keys);
+void write_map_to_fptr(FILE *fptr, char *map[], struct MapKeyArr *keys);
 
 /**
  * @brief opens temp file at path, writes source strings (old names)
@@ -158,4 +126,4 @@ void write_map_to_fptr(FILE *fptr, struct StrPairNode *map[], struct MapKeyArr *
  * @param keys: struct containing list of keys to node locations in
  *      hashmap
  */
-void write_old_names_to_tmp_file(char path[], struct StrPairNode *map[], struct MapKeyArr *keys);
+void write_old_names_to_tmp_file(char path[], char *map[], struct MapKeyArr *keys);
