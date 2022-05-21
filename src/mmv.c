@@ -258,7 +258,14 @@ void rename_path_pair(const char *src, const char *dest)
     int rename_result = rename(src, dest);
 
     if (rename_result == -1)
-        fprintf(stderr, "mmv: \'%s\': %s\n", src, strerror(errno));
+    {
+        // operand file does not exist
+        if (errno == 2)
+            fprintf(stderr, "mmv: \'%s\': %s\n", src, strerror(errno));
+
+        else
+            fprintf(stderr, "mmv: \'%s\'  \'%s\': %s\n", src, dest, strerror(errno));
+    }
 }
 
 void rm_path(char *path)
@@ -266,7 +273,7 @@ void rm_path(char *path)
     int rm_success = remove(path);
 
     if (rm_success == -1)
-        fprintf(stderr, "mmv: failed to delete \"%s\": %s\n", path, strerror(errno));
+        fprintf(stderr, "mmv: failed to delete \'%s\': %s\n", path, strerror(errno));
 }
 
 void sanitize_num_args(int *args_len)
