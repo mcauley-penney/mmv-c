@@ -227,7 +227,7 @@ int probe_for_null_hashpos(char ***map, const unsigned int map_size, const char 
 
 void rename_filesystem_items(char tmp_path[], char *map[], struct MapKeyArr *keys)
 {
-    char cur_str[NAME_MAX], *read_ptr = "";
+    char cur_str[PATH_MAX], *read_ptr = "";
     FILE *tmp_fptr;
     unsigned int *keyarr = keys->keyarr;
     size_t i = 0;
@@ -236,7 +236,7 @@ void rename_filesystem_items(char tmp_path[], char *map[], struct MapKeyArr *key
 
     while (read_ptr != NULL && i < keys->num_keys)
     {
-        read_ptr = fgets(cur_str, NAME_MAX, tmp_fptr);
+        read_ptr = fgets(cur_str, PATH_MAX, tmp_fptr);
 
         // only proceed with iteration if the current string
         // isn't just a newline

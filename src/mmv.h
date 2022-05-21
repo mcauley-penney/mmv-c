@@ -52,8 +52,6 @@ void init_hashmap_objs(const unsigned int num_args, const unsigned int map_size,
 
 void init_node_src(char **array_pos, const char *src_str);
 
-struct StrNode *init_pair_node(void);
-
 void make_argv_hashmap(char *argv[], int argc, char ***map, struct MapKeyArr **keys);
 
 /**
