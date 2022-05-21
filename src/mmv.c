@@ -196,7 +196,10 @@ void open_tmp_file_in_editor(const char *path)
     snprintf(edit_cmd, cmd_len, "%s %s", editor_name, path);
 
     // open temporary file containing argv using editor of choice
-    system(edit_cmd);
+    int cmd_ret = system(edit_cmd);
+
+    if (cmd_ret != 0)
+        fprintf(stderr, "mmv: \'%s\' returned non-zero exit status: %d\n", editor_name, cmd_ret);
 
     free(edit_cmd);
 }
