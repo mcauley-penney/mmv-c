@@ -6,7 +6,7 @@
 # files and directories
 # -------------------------------------------------------------------
 bin_name = mmv
-install_dir = /usr/bin/
+bindir = /usr/bin
 
 src_dir = src
 # src files without dir prefix
@@ -36,7 +36,7 @@ LFLAGS = $(warn)
 #  targets
 # -------------------------------------------------------------------
 # tell make not to create files for these target names
-.PHONY: all clean clearscreen fresh install
+.PHONY: all check clean install uninstall
 
 # recurse down to create all needed items
 all: $(bin_name)
@@ -55,11 +55,11 @@ clean:
 	rm -rf $(build_dir)
 	rm $(bin_name)
 
-clearscreen:
-	clear
-
-fresh: | clean clearscreen
-
 # install target for "sudo make install"
 install:
-	install -m 007 $(bin) $(bindir)
+	$(NORMAL_INSTALL)
+	install -m 007 $(bin_name) $(bindir)/
+
+uninstall:
+	$(NORMAL_UNINSTALL)
+	rm $(bindir)/$(bin_name)
