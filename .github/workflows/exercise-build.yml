@@ -1,0 +1,36 @@
+name: make and exercise
+
+on:
+  push:
+    branches: '**'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # would normally include dependency installation
+    # here, but mmv has none
+
+    - name: build executable
+      run: make
+
+    - name: install
+      run: sudo make install
+
+    - name: check for valid install
+      run: which mmv
+
+    - name: uninstall
+      run: sudo make uninstall
+
+    - name: check for valid uninstall
+      run: which mmv
+
+    - name: clean up
+      run: make clean
