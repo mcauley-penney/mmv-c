@@ -1,13 +1,25 @@
+# mmv
 # GCC Options: https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html
 
-# files
-bin = mmv # output binary name
-bindir = /usr/bin/
-src_dir = src
-src_files = $(notdir $(wildcard $(src_dir)/*.c)) # src files without dir prefix
-VPATH = $(src_dir) # where to look for src files
 
+# -------------------------------------------------------------------
+# files and directories
+# -------------------------------------------------------------------
+bin_name = mmv
+install_dir = /usr/bin/
+
+src_dir = src
+# src files without dir prefix
+src_fnames := $(notdir $(wildcard $(src_dir)/*.c))
+
+build_dir = build
+obj_fnames := $(src_fnames:.c=.o)
+obj_fnames := $(addprefix $(build_dir)/, $(obj_fnames))
+
+
+# -------------------------------------------------------------------
 # flags
+# -------------------------------------------------------------------
 optim = -O2
 w-arith = -Wdouble-promotion -Wfloat-equal
 w-basic = -pedantic -Wall -Wextra
@@ -20,27 +32,34 @@ CFLAGS = $(warn) -c $(optim)
 LFLAGS = $(warn)
 
 
-# object file names
-obj_files = $(patsubst %.c, %.o, $(src_files))
+# -------------------------------------------------------------------
+#  targets
+# -------------------------------------------------------------------
+# tell make not to create files for these target names
+.PHONY: all clean clearscreen fresh install
 
+# recurse down to create all needed items
+all: $(bin_name)
+
+$(bin_name): $(obj_fnames)
+	$(CC) $(LFLAGS) $^ -o $@
 
 # general rule: construct all .o files from
 # the source files with the same file name
-%.o : %.c
-	$(CC) $(CFLAGS) $<
+$(obj_fnames): $(src_dir)/$(src_fnames)
+	mkdir -p $(build_dir)
+	$(CC) $(CFLAGS) $< -o $@
 
+# clean target: remove all object files and binary
+clean:
+	rm -rf $(build_dir)
+	rm $(bin_name)
 
-# binary rule: construct binary with given
-# name from object files provided
-$(bin): $(obj_files)
-	$(CC) $(LFLAGS) $^ -o $@
+clearscreen:
+	clear
 
+fresh: | clean clearscreen
 
 # install target for "sudo make install"
 install:
 	install -m 007 $(bin) $(bindir)
-
-
-# clean target: remove all object files and binary
-clean:
-	rm *.o $(bin)
