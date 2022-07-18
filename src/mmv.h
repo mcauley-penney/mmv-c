@@ -6,13 +6,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define ARG_MAX 10001
-
-// TODO: remove -
-#include <time.h>
-#define TESTING
-// --------------
-
 typedef u_int32_t Fnv32_t;
 
 struct MapKeyArr
@@ -27,31 +20,45 @@ struct MapKeyArr
  * @param str: string to hash
  * @param map_size: size of map; used to modulo the hash to fit into array
  *
- * @return hash after modulo
+ * @return hash for input string % map_size
  */
-unsigned int get_fnv_32a_str_hash(char *str, const unsigned int map_size);
+unsigned int calc_fnv32a_str_hash(char *str, const unsigned int map_size);
 
 /**
  * @brief frees a hashmap of strings
  *
- * @param map: map to free
- * @param keys: struct containing list of keys where nodes exist
+ * @param map: hash map to free the nodes of
+ * @param keys: struct containing list of indices where nodes exist
  */
 void free_map_nodes(char *map[], struct MapKeyArr *keys);
 
 /**
- * @brief opens the given path and gets its file pointer
+ * @brief opens the given path and returns its file pointer
  *
- * @param tmp_path: string of file path to open
+ * @param tmp_path: string, file path to open
  *
  * @return file pointer to opened path
  */
-FILE *__attribute__((malloc)) get_tmp_path_fptr(char *tmp_path);
+FILE *__attribute__((malloc)) open_tmp_path_fptr(char *tmp_path);
 
 void init_hashmap_objs(const unsigned int num_args, const unsigned int map_size, char ***map, struct MapKeyArr **keys);
 
-void init_node_src(char **array_pos, const char *src_str);
+/**
+ * @brief move the given source string into the given hash map position
+ *
+ * @param array_pos: position in hash map to populate
+ * @param src_str: str to copy into hash map
+ */
+void cp_str_to_arr(char **array_pos, const char *src_str);
 
+/**
+ * @brief Create a hashmap of strings from argv
+ *
+ * @param argv
+ * @param argc
+ * @param ***map: pointer to a string array
+ * @param **key: pointer to MapKeyArr struct
+ */
 void make_argv_hashmap(char *argv[], int argc, char ***map, struct MapKeyArr **keys);
 
 /**
@@ -100,8 +107,6 @@ void rename_path_pair(const char *src, const char *dest);
  * @param path: path to item to delete
  */
 void rm_path(char *path);
-
-void sanitize_num_args(int *argc);
 
 /**
  * @brief iterates over map of nodes containing item names to rename
