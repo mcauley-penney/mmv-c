@@ -1,7 +1,3 @@
-// TODO:
-//  1. try and update map and keys pointers to drop one star
-//  2. feat: ensure directory-moving ability
-
 /**
  *  Title       : mmv-c
  *  Description : interactively move files and directories
@@ -18,37 +14,122 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    char **map = NULL;
-    struct MapKeyArr *keys = NULL;
-
-    make_argv_hashmap(argv, argc, &map, &keys);
+    struct Map *rename_map = make_str_hashmap(argv, argc);
+    if (rename_map == NULL)
+        goto failure_out;
 
     char tmp_path[] = "/tmp/mmv_XXXXXX";
 
-    // even though all files created by mmv will be removed
-    // disallow anyone but user from accessing them.
+    // disallow anyone but user from
+    // accessing any files created by mmv
     umask(077);
 
-    write_old_names_to_tmp_file(tmp_path, map, keys);
+    if (write_strarr_to_file(rename_map, tmp_path) != 0)
+        goto failure_out;
 
-    open_tmp_file_in_editor(tmp_path);
+    if (open_file_in_editor(tmp_path) != 0)
+        goto failure_out;
 
-    rename_filesystem_items(tmp_path, map, keys);
+    if (rename_filesystem_items(rename_map, tmp_path) != 0)
+        goto failure_out;
 
     rm_path(tmp_path);
-    free_map_nodes(map, keys);
-    free(map);
-    free(keys);
-
+    free_hashmap(rename_map);
     return EXIT_SUCCESS;
+
+failure_out:
+    rm_path(tmp_path);
+    free_hashmap(rename_map);
+    return EXIT_FAILURE;
 }
 
-unsigned int calc_fnv32a_str_hash(char *str, const unsigned int map_size)
+struct Map *make_str_hashmap(char *names[], int name_count)
+{
+    int insert_ret;
+    unsigned int i;
+    const unsigned int u_name_count = (unsigned int)name_count;
+
+    // (6 * (val - 1)) + 1 is a formula that creates a
+    // prime number using some value as a base. We are
+    // using this to create a prime hash map size to
+    // attempt to mitigate collisions. While the FNV
+    // hash is known to be of high quality and this is
+    // supposed to not be necessary, this is not heavy
+    // to implement and adds a layer of protection.
+    const unsigned int map_size = (6 * (u_name_count - 1)) + 1;
+
+    struct Map *map = alloc_hashmap(u_name_count, map_size);
+    if (map == NULL)
+    {
+        perror("mmv: failed to allocate memory to initialize hashmap");
+        exit(EXIT_FAILURE);
+    }
+
+    // start at 1 to avoid reading program invocation
+    for (i = 1; i < u_name_count; i++)
+    {
+        insert_ret = hashmap_insert_str(map_size, names[i], map);
+        if (insert_ret == -1)
+            return NULL;
+    }
+
+    return map;
+}
+
+struct Map *alloc_hashmap(const unsigned int num_names, const unsigned int map_size)
+{
+    unsigned int i;
+
+    struct Map *map = malloc(sizeof(struct Map) + (num_names - 1) * sizeof(int));
+    if (map == NULL)
+        return NULL;
+
+    map->hashmap = malloc(sizeof(char *) * map_size);
+    if (map->hashmap == NULL)
+    {
+        free(map);
+        return NULL;
+    }
+
+    map->num_keys = 0;
+
+    for (i = 0; i < map_size; i++)
+        map->hashmap[i] = NULL;
+
+    return map;
+}
+
+int hashmap_insert_str(const unsigned int map_size, char *cur_str, struct Map *map)
+{
+    char *cpy_ret;
+    int dupe_found = -1;
+    unsigned int hash = hash_str(cur_str, map_size);
+
+    while (map->hashmap[hash] != NULL && dupe_found != 0)
+    {
+        dupe_found = strcmp(map->hashmap[hash], cur_str);
+
+        hash = (hash + 1 != map_size) ? hash + 1 : 0;
+    }
+
+    if (dupe_found != 0)
+    {
+        cpy_ret = cpy_str_to_arr(&map->hashmap[hash], cur_str);
+        if (cpy_ret == NULL)
+            return -1;
+
+        map->keyarr[map->num_keys] = hash;
+        map->num_keys++;
+    }
+
+    return dupe_found;
+}
+
+unsigned int hash_str(char *str, const unsigned int map_size)
 {
     unsigned char *s = (unsigned char *)str;
     Fnv32_t hval = ((Fnv32_t)0x811c9dc5);
 
-    // FNV-1a hash each octet in the buffer
     while (*s)
     {
         hval ^= (Fnv32_t)*s++;
@@ -58,201 +139,124 @@ unsigned int calc_fnv32a_str_hash(char *str, const unsigned int map_size)
     return hval % map_size;
 }
 
-void free_map_nodes(char *map[], struct MapKeyArr *keys)
+char *cpy_str_to_arr(char **arr_dest, const char *src_str)
+{
+    *arr_dest = malloc((strlen(src_str) + 1) * sizeof(char));
+    if (arr_dest == NULL)
+    {
+        perror("mmv: failed to allocate memory for new map node source str");
+        return NULL;
+    }
+
+    return strcpy(*arr_dest, src_str);
+}
+
+int write_strarr_to_file(struct Map *map, char path[])
 {
     size_t i;
-    for (i = 0; i < keys->num_keys; i++)
-        free(map[keys->keyarr[i]]);
+
+    FILE *tmp_fptr = open_tmp_path_fptr(path);
+    if (tmp_fptr == NULL)
+    {
+        fprintf(stderr, "mmv: failed to open \"%s\": %s\n", path, strerror(errno));
+        return errno;
+    }
+
+    for (i = 0; i < map->num_keys; i++)
+        fprintf(tmp_fptr, "%s\n", map->hashmap[map->keyarr[i]]);
+
+    fclose(tmp_fptr);
+
+    return 0;
 }
 
 FILE *__attribute__((malloc)) open_tmp_path_fptr(char *tmp_path)
 {
     FILE *fptr;
-    int tmp_fd = mkstemp(tmp_path);
 
+    int tmp_fd = mkstemp(tmp_path);
     if (tmp_fd == -1)
-    {
-        fprintf(stderr, "mmv: failed to open \"%s\" as file descriptor: %s\n", tmp_path, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
+        return NULL;
 
     fptr = fdopen(tmp_fd, "w");
-
-    if (fptr == NULL)
-    {
-        fprintf(stderr, "mmv: failed to open \"%s\" as file pointer: %s\n", tmp_path, strerror(errno));
-        rm_path(tmp_path);
-        exit(EXIT_FAILURE);
-    }
-
     return fptr;
 }
 
-void init_hashmap_objs(const unsigned int num_args, const unsigned int map_size, char ***map, struct MapKeyArr **keys)
-{
-    unsigned int i;
-
-    // struct with FAM must be malloced and size of FAM must be included
-    *keys = malloc(sizeof(struct MapKeyArr) + (num_args - 1) * sizeof(int));
-    if (keys == NULL)
-    {
-        perror("mmv: failed to allocate memory for hash keys struct: ");
-        exit(EXIT_FAILURE);
-    }
-
-    *map = malloc(sizeof(char *) * map_size);
-    if (map == NULL)
-    {
-        perror("mmv: failed to allocate memory for argv hash map: ");
-        exit(EXIT_FAILURE);
-    }
-
-    (*keys)->num_keys = 0;
-
-    for (i = 0; i < map_size; i++)
-        (*map)[i] = NULL;
-}
-
-void cp_str_to_arr(char **array_pos, const char *src_str)
-{
-    *array_pos = malloc((strlen(src_str) + 1) * sizeof(char));
-
-    if (array_pos == NULL)
-    {
-        perror("mmv: failed to allocate memory for new map node source str: ");
-        exit(EXIT_FAILURE);
-    }
-
-    strcpy(*array_pos, src_str);
-}
-
-void make_argv_hashmap(char *argv[], int argc, char ***map, struct MapKeyArr **keys)
-{
-    char *cur_str = NULL;
-    int dupe_found;
-    unsigned int hash, i;
-    const unsigned int u_argc = (unsigned int)argc;
-
-    // (6 * (val - 1)) + 1 is a formula that creates a
-    // prime number using some value as a base. We are
-    // using this to create a prime hash map size to
-    // attempt to mitigate collisions. While the FNV
-    // hash is known to be of high quality and this is
-    // supposed to not be necessary, this is not heavy
-    // to implement and adds a layer of protection.
-    const unsigned int map_size = (6 * (u_argc - 1)) + 1;
-
-    init_hashmap_objs(u_argc, map_size, map, keys);
-
-    // start at 1 instead of 0 to avoid reading program invocation
-    for (i = 1; i < u_argc; i++)
-    {
-        cur_str = argv[i];
-        hash = calc_fnv32a_str_hash(cur_str, map_size);
-
-        dupe_found = probe_for_null_hashpos(map, map_size, cur_str, &hash);
-
-        if (dupe_found != 0)
-        {
-            cp_str_to_arr(&(*map)[hash], cur_str);
-            (*keys)->keyarr[(*keys)->num_keys] = hash;
-            (*keys)->num_keys++;
-        }
-    }
-}
-
-void open_file(char *path, const char *mode, FILE **fptr)
-{
-    *fptr = fopen(path, mode);
-
-    if (fptr == NULL)
-    {
-        fprintf(stderr, "mmv: failed to open \"%s\" in \"%s\" mode: %s\n", path, mode, strerror(errno));
-        rm_path(path);
-        exit(EXIT_FAILURE);
-    }
-}
-
-void open_tmp_file_in_editor(const char *path)
+int open_file_in_editor(const char *path)
 {
     int ret;
-
     char *editor_name = getenv("EDITOR");
 
     if (editor_name == NULL)
         editor_name = "nano";
 
-    // provide space for "$EDITOR path\0", e.g. "nano file.txt\0"
+    // provide space for "$EDITOR path\0", e.g. "nano test.txt\0"
     const size_t cmd_len = strlen(editor_name) + strlen(path) + 2;
     char *edit_cmd = malloc(sizeof(edit_cmd) * cmd_len);
+
     if (edit_cmd == NULL)
     {
-        perror("mmv: failed to allocate memory for $EDITOR command string: ");
-        exit(EXIT_FAILURE);
+        perror("mmv: failed to allocate memory for $EDITOR command string");
+        return errno;
     }
 
     ret = snprintf(edit_cmd, cmd_len, "%s %s", editor_name, path);
 
-    if (ret < 0 || ret > cmd_len)
-        perror("mmv: couldn't create $EDITOR command string: ");
+    if (ret < 0 || ret > (int)cmd_len)
+    {
+        perror("mmv: couldn't create $EDITOR command string");
+        return errno;
+    }
 
     // open temporary file containing argv using editor of choice
     ret = system(edit_cmd);
 
     if (ret != 0)
-        fprintf(stderr, "mmv: \'%s\' returned non-zero exit status: %d\n", editor_name, ret);
-
-    free(edit_cmd);
-}
-
-int probe_for_null_hashpos(char ***map, const unsigned int map_size, const char *cur_str, unsigned int *hash)
-{
-    char **deref_map = *map;
-    int dupe_found = -1;
-
-    while (deref_map[*hash] != NULL && dupe_found != 0)
     {
-        dupe_found = strcmp(deref_map[*hash], cur_str);
-
-        *hash = (*hash + 1 != map_size) ? *hash + 1 : 0;
+        fprintf(stderr, "mmv: \'%s\' returned non-zero exit status: %d\n", editor_name, ret);
+        return errno;
     }
 
-    return dupe_found;
+    free(edit_cmd);
+
+    return 0;
 }
 
-void rename_filesystem_items(char tmp_path[], char *map[], struct MapKeyArr *keys)
+int rename_filesystem_items(struct Map *map, char path[])
 {
     char cur_str[PATH_MAX], *read_ptr = "";
-    FILE *tmp_fptr;
-    unsigned int *keyarr = keys->keyarr;
+    unsigned int *keyarr = map->keyarr;
     size_t i = 0;
 
-    open_file(tmp_path, "r", &tmp_fptr);
+    FILE *tmp_fptr = fopen(path, "r");
+    if (tmp_fptr == NULL)
+    {
+        fprintf(stderr, "mmv: failed to open \"%s\" in \"r\" mode: %s\n", path, strerror(errno));
+        return errno;
+    }
 
-    while (read_ptr != NULL && i < keys->num_keys)
+    while (read_ptr != NULL && i < map->num_keys)
     {
         read_ptr = fgets(cur_str, PATH_MAX, tmp_fptr);
 
-        // only proceed with iteration if the current string
-        // isn't just a newline
         if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
-            // fgets is guaranteed to return a string with a
-            // newline. Replace it with null byte
             cur_str[strlen(cur_str) - 1] = '\0';
-            rename_path_pair(map[keyarr[i]], cur_str);
+            rename_path(map->hashmap[keyarr[i]], cur_str);
             i++;
         }
     }
 
     fclose(tmp_fptr);
+
+    return 0;
 }
 
 // TODO:
 // must investigate directory moving and renaming functionality.
 // We think this doesn't take care of all that, so we should
 // make this a more full wrapper and include all that
-void rename_path_pair(const char *src, const char *dest)
+void rename_path(const char *src, const char *dest)
 {
     int rename_result = rename(src, dest);
 
@@ -266,14 +270,17 @@ void rm_path(char *path)
         fprintf(stderr, "mmv: failed to delete \'%s\': %s\n", path, strerror(errno));
 }
 
-void write_old_names_to_tmp_file(char path[], char *map[], struct MapKeyArr *keys)
+void free_hashmap(struct Map *map)
 {
     size_t i;
+    unsigned int key;
 
-    FILE *tmp_fptr = open_tmp_path_fptr(path);
+    for (i = 0; i < map->num_keys; i++)
+    {
+        key = map->keyarr[i];
+        free(map->hashmap[key]);
+    }
 
-    for (i = 0; i < keys->num_keys; i++)
-        fprintf(tmp_fptr, "%s\n", map[keys->keyarr[i]]);
-
-    fclose(tmp_fptr);
+    free(map->hashmap);
+    free(map);
 }
