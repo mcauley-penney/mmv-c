@@ -59,7 +59,7 @@ char *cpy_str_to_arr(char **array_pos, const char *src_str);
  * @param keys: struct containing list of keys to node locations in
  *      hashmap
  */
-int write_strarr_to_file(struct Map *map, char path[]);
+int write_strarr_to_tmpfile(struct Map *map, char tmppath[]);
 
 /**
  * @brief opens the given path and returns its file pointer
