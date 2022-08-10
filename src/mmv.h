@@ -1,4 +1,9 @@
-#include <assert.h>
+/**
+ *  Title       : mmv-c
+ *  Description : interactively move files and directories
+ *  Author      : Jacob M. Penney
+ */
+
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
@@ -16,8 +21,6 @@ struct Map
     unsigned int keyarr[];
 };
 
-// TODO: update docs
-
 /**
  * @brief Create a hashmap of strings from argv
  *
@@ -26,7 +29,7 @@ struct Map
  * @param ***map: pointer to a string array
  * @param **key: pointer to MapKeyArr struct
  */
-struct Map *make_str_hashmap(char *argv[], int argc);
+struct Map *make_str_hashmap(int argc, char *argv[]);
 
 struct Map *alloc_hashmap(const unsigned int num_args, const unsigned int map_size);
 

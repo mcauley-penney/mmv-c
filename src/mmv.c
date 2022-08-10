@@ -1,54 +1,14 @@
-/**
- *  Title       : mmv-c
- *  Description : interactively move files and directories
- *  Author      : Jacob M. Penney
- */
-
 #include "mmv.h"
 
-// TODO:
-// int return values should all match. Some functions
-// return 0 for success while others return 1
-
-int main(int argc, char *argv[])
+struct Map *make_str_hashmap(int arg_count, char *names[])
 {
-    if (argc < 2)
+
+    if (arg_count < 2)
     {
         fprintf(stderr, "mmv: missing file operand\n");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
 
-    struct Map *rename_map = make_str_hashmap(argv, argc);
-    if (rename_map == NULL)
-        goto free_map_out;
-
-    char tmp_path[] = "/tmp/mmv_XXXXXX";
-
-    umask(077);
-
-    if (write_strarr_to_tmpfile(rename_map, tmp_path) != 0)
-        goto rm_path_out;
-
-    if (open_file_in_editor(tmp_path) != 0)
-        goto rm_path_out;
-
-    if (rename_filesystem_items(rename_map, tmp_path) != 0)
-        goto rm_path_out;
-
-    rm_path(tmp_path);
-    free_hashmap(rename_map);
-    return EXIT_SUCCESS;
-
-rm_path_out:
-    rm_path(tmp_path);
-
-free_map_out:
-    free_hashmap(rename_map);
-    return EXIT_FAILURE;
-}
-
-struct Map *make_str_hashmap(char *names[], int arg_count)
-{
     unsigned int i;
     const unsigned int u_arg_count = (unsigned int)arg_count;
 
@@ -65,13 +25,16 @@ struct Map *make_str_hashmap(char *names[], int arg_count)
     if (map == NULL)
     {
         perror("mmv: failed to allocate memory to initialize hashmap");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
 
     // start at 1 to avoid reading program invocation
     for (i = 1; i < u_arg_count; i++)
         if (hashmap_insert_str(map_space, names[i], map) == 0)
+        {
+            free_hashmap(map);
             return NULL;
+        }
 
     return map;
 }
@@ -216,7 +179,6 @@ int open_file_in_editor(const char *path)
 int rename_filesystem_items(struct Map *map, char path[])
 {
     char cur_str[PATH_MAX], *read_ptr = "";
-    unsigned int *keyarr = map->keyarr;
     size_t i = 0;
 
     FILE *tmp_fptr = fopen(path, "r");
@@ -233,7 +195,7 @@ int rename_filesystem_items(struct Map *map, char path[])
         if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
             cur_str[strlen(cur_str) - 1] = '\0';
-            rename_path(map->hashmap[keyarr[i]], cur_str);
+            rename_path(map->hashmap[map->keyarr[i]], cur_str);
             i++;
         }
     }
