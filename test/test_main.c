@@ -1,4 +1,3 @@
-#include "../inc/mmv.h"
 #include "test_mmv.h"
 
 int main(void)

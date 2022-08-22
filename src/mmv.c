@@ -1,4 +1,4 @@
-#include "../inc/mmv.h"
+#include "mmv.h"
 
 struct Set *make_str_set(int arg_count, char *args[])
 {
@@ -164,6 +164,7 @@ int open_file_in_editor(const char *path)
         return errno;
     }
 
+#if DEBUG == 0
     // open temporary file containing argv using editor of choice
     if (system(edit_cmd) != 0)
     {
@@ -171,6 +172,7 @@ int open_file_in_editor(const char *path)
         free(edit_cmd);
         return errno;
     }
+#endif
 
     free(edit_cmd);
 

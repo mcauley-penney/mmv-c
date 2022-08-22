@@ -1,5 +1,5 @@
 #include "test_mmv.h"
-#include "../inc/mmv.h"
+#include "../src/mmv.h"
 
 void assert_hashmap_correct_creation(void)
 {

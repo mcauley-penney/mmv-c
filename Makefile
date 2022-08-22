@@ -1,23 +1,20 @@
- # mmv
+# mmv
 # GCC Options: https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html
 
 # -------------------------------------------------------------------
 # files and directories
 # -------------------------------------------------------------------
 bin_name = mmv
-test_bin_name = test_$(bin_name)
 
 install_dir = /usr/bin
 src_dir = src
 inc_dir = inc
 test_dir = test
+debug_dir = debug
 build_dir = build
 
-src_fnames := $(notdir $(wildcard $(src_dir)/*.c))
-obj_files := $(addprefix $(build_dir)/, $(src_fnames:.c=.o))
-
-test_src_fnames := $(notdir $(wildcard $(test_dir)/*.c))
-test_obj_files := $(addprefix $(build_dir)/, $(test_src_fnames:.c=.o))
+src_files := $(wildcard $(src_dir)/*)
+test_src_files := $(wildcard $(test_dir)/*)
 
 
 # -------------------------------------------------------------------
@@ -32,36 +29,25 @@ w-sgst = -Wsuggest-attribute=const -Wsuggest-attribute=malloc -Wsuggest-attribut
 warn = $(w-basic) $(w-extra) $(w-arith) $(w-fmt) $(w-sgst)
 
 CFLAGS = $(warn) $(optim)
-LFLAGS = $(warn)
 
 
 # -------------------------------------------------------------------
 #  targets
 # -------------------------------------------------------------------
-# tell make not to create files for these target names
-.PHONY: all check clean install test test_clean uninstall
+.PHONY: all test debug clean test_clean install uninstall
 
 
-all: $(bin_name)
-$(bin_name): $(obj_files)
-	$(CC) $(LFLAGS) $^ -o $@
-
-$(build_dir)/%.o: $(src_dir)/%.c $(inc_dir)/mmv.h
-	mkdir -p $(build_dir)
-	$(CC) $(CFLAGS) -c $< -o $@
+all:
+	$(CC) $(CFLAGS) main.c $(src_files) -o $(bin_name)
 
 
-test: $(test_bin_name)
-$(test_bin_name): $(test_obj_files) $(build_dir)/mmv.o
-	$(CC) $(LFLAGS) $^ -o $@
+test:
+	$(CC) $(CFLAGS) $(test_src_files) $(src_files) -o test_$(bin_name)
+	./test_$(bin_name)
 
-$(build_dir)/%.o: $(test_dir)/%.c $(inc_dir)/mmv.h $(test_dir)/test_mmv.h
-	mkdir -p $(build_dir)
-	$(CC) $(CFLAGS) -c $< -o $@
 
-$(build_dir)/mmv.o: $(src_dir)/mmv.c $(inc_dir)/mmv.h
-	mkdir -p $(build_dir)
-	$(CC) $(CFLAGS) -c $< -o $@
+debug:
+	$(CC) $(CFLAGS) -D DEBUG=1 main.c $(src_files) -o debug_$(bin_name)
 
 
 # clean target: remove all object files and binary
@@ -72,8 +58,12 @@ clean:
 
 test_clean:
 	rm -rf $(build_dir)
-	rm $(test_bin_name)
+	rm test_$(bin_name)
 
+
+debug_clean:
+	rm -rf $(build_dir)
+	rm debug_$(bin_name)
 
 # install target for "sudo make install"
 install:

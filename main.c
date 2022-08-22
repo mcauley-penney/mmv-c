@@ -1,4 +1,4 @@
-#include "../inc/mmv.h"
+#include "src/mmv.h"
 
 int main(int argc, char *argv[])
 {
