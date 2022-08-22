@@ -1,4 +1,9 @@
-#include <assert.h>
+/**
+ *  Title       : mmv-c
+ *  Description : interactively move files and directories
+ *  Author      : Jacob M. Penney
+ */
+
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
@@ -9,14 +14,12 @@
 
 typedef u_int32_t Fnv32_t;
 
-struct Map
+struct Set
 {
     size_t num_keys;
-    char **hashmap;
-    unsigned int keyarr[];
+    char **map;
+    unsigned int keys[];
 };
-
-// TODO: update docs
 
 /**
  * @brief Create a hashmap of strings from argv
@@ -26,11 +29,11 @@ struct Map
  * @param ***map: pointer to a string array
  * @param **key: pointer to MapKeyArr struct
  */
-struct Map *make_str_hashmap(char *argv[], int argc);
+struct Set *make_str_set(int argc, char *argv[]);
 
-struct Map *alloc_hashmap(const unsigned int num_args, const unsigned int map_size);
+struct Set *alloc_str_set(const unsigned int num_args, const unsigned int map_size);
 
-int hashmap_insert_str(const unsigned int map_size, char *cur_str, struct Map *map);
+int str_set_insert(char *cur_str, const unsigned int map_size, struct Set *map);
 
 /**
  * @brief hashes a string with the Fowler–Noll–Vo 1a 32bit hash fn
@@ -59,7 +62,7 @@ char *cpy_str_to_arr(char **array_pos, const char *src_str);
  * @param keys: struct containing list of keys to node locations in
  *      hashmap
  */
-int write_strarr_to_tmpfile(struct Map *map, char tmppath[]);
+int write_strarr_to_tmpfile(struct Set *map, char tmppath[]);
 
 /**
  * @brief opens the given path and returns its file pointer
@@ -89,7 +92,7 @@ int open_file_in_editor(const char *path);
  * @param keys: struct containing list of keys of locations of
  *      string pair nodes in hashmap
  */
-int rename_filesystem_items(struct Map *map, char path[]);
+int rename_filesystem_items(struct Set *map, char path[]);
 
 /**
  * @brief renames an item in file system
@@ -111,4 +114,4 @@ void rm_path(char *path);
  *
  * @param map: Map struct to free the nodes of
  */
-void free_hashmap(struct Map *map);
+void free_str_set(struct Set *map);

@@ -1,13 +1,10 @@
 # mmv-c 📦
+![Build Badge](https://github.com/mcauley-penney/mmv-c/actions/workflows/build.yml/badge.svg)
+![Valgrind Badge](https://github.com/mcauley-penney/mmv-c/actions/workflows/valgrind.yml/badge.svg)
+
 Edit file and directory names in `$EDITOR`. Inspired by [itchyny/mmv](https://github.com/itchyny/mmv).
 
 ![mmv_intro](https://user-images.githubusercontent.com/59481467/168495786-2d7900e7-50ff-4ca4-aa86-67bf9da24199.gif)
-
-
-## about
-I like and frequently use the base functionality of the original, linked above. I've implemented it before [in shell](https://github.com/mcauley-penney/mmv.sh) and wanted to try my hand at a C implementation.
-
-This version forgoes some of the features of the original that I don't use and don't need, such as cyclical renaming. See it for a more featureful experience.
 
 
 ## usage
@@ -30,6 +27,9 @@ sudo make install
 cd ..
 sudo rm -r mmv-c
 ```
+
+## differences with itchyny/mmv
+This project doesn't seek to completely duplicate the functionality of the original. It is a work-in-progress and may, in the future, incorporate functionality from the original or new abilities that I might find useful.
 
 
 ## credit
