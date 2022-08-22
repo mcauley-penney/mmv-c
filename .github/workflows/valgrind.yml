@@ -10,22 +10,21 @@ jobs:
   execute_valgrind:
     runs-on: ubuntu-latest
     env:
-        Test_files_dir: test_dir
-        Utils: .github/utils
+        test_files_dir: test_dir
+        utils: .github/utils
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: install dependencies
-      run: |
-        sudo apt-get -y install valgrind
-        sudo apt-get -y install libcunit1 libcunit1-doc libcunit1-dev
+    - name: Install dependencies
+      run: sudo apt-get -y install valgrind
 
-    - name: create test files
-      run: sh "$Utils"/init_files.sh "$Test_files_dir" 10
+    - name: Create test files
+      run: sh "$utils"/init_files.sh "$test_files_dir" 10
 
-    - name: build debug executable
-      run: |
-        make debug
-        valgrind --leak-check=full --trace-children=yes --track-origins=yes \
-            --show-leak-kinds=all -s ./debug_mmv "$Test_files_dir"/test*
+    - name: Build debug executable
+      run: make debug
+
+    - name: Execute Valgrind
+      run: valgrind --leak-check=full --trace-children=yes --track-origins=yes \
+            --show-leak-kinds=all -s ./debug_mmv "$test_files_dir"/test*

@@ -1,4 +1,4 @@
-name: Builds
+name: Build
 
 on:
   push:
@@ -13,26 +13,26 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: build primary executable
+    - name: Build primary executable
       run: make
 
-    - name: exercise install
+    - name: Exercise install
       run: sudo make install
 
-    - name: exercise uninstall
+    - name: Exercise uninstall
       run: sudo make uninstall
 
-    - name: clean up primary build
+    - name: Clean up primary build
       run: make clean
 
-    - name: build test executable
+    - name: Build test executable
       run: make test
 
-    - name: clean up test build
+    - name: Clean up test build
       run: make test_clean
 
-    - name: build debug executable
+    - name: Build debug executable
       run: make debug
 
-    - name: clean up debug build
+    - name: Clean up debug build
       run: make debug_clean
