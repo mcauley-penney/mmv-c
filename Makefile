@@ -5,17 +5,24 @@
 # files and directories
 # -------------------------------------------------------------------
 bin_name = mmv
+test_bin_name = test_$(bin_name)
+
 install_dir = /usr/bin
 src_dir = src
+inc_dir = inc
+test_dir = test
 build_dir = build
+
 src_fnames := $(notdir $(wildcard $(src_dir)/*.c))
 obj_files := $(addprefix $(build_dir)/, $(src_fnames:.c=.o))
+
+test_src_fnames := $(notdir $(wildcard $(test_dir)/*.c))
+test_obj_files := $(addprefix $(build_dir)/, $(test_src_fnames:.c=.o))
 
 
 # -------------------------------------------------------------------
 # flags
 # -------------------------------------------------------------------
-cover = -fprofile-arcs -ftest-coverage
 optim = -O2
 w-arith = -Wdouble-promotion -Wfloat-equal
 w-basic = -pedantic -Wall -Wextra
@@ -32,15 +39,27 @@ LFLAGS = $(warn)
 #  targets
 # -------------------------------------------------------------------
 # tell make not to create files for these target names
-.PHONY: all check clean install uninstall
+.PHONY: all check clean install test test_clean uninstall
 
 
 all: $(bin_name)
-
 $(bin_name): $(obj_files)
 	$(CC) $(LFLAGS) $^ -o $@
 
-$(build_dir)/%.o: $(src_dir)/%.c $(src_dir)/mmv.h
+$(build_dir)/%.o: $(src_dir)/%.c $(inc_dir)/mmv.h
+	mkdir -p $(build_dir)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
+test: $(test_bin_name)
+$(test_bin_name): $(test_obj_files) $(build_dir)/mmv.o
+	$(CC) $(LFLAGS) $^ -o $@
+
+$(build_dir)/%.o: $(test_dir)/%.c $(inc_dir)/mmv.h $(test_dir)/test_mmv.h
+	mkdir -p $(build_dir)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(build_dir)/mmv.o: $(src_dir)/mmv.c $(inc_dir)/mmv.h
 	mkdir -p $(build_dir)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -49,6 +68,11 @@ $(build_dir)/%.o: $(src_dir)/%.c $(src_dir)/mmv.h
 clean:
 	rm -rf $(build_dir)
 	rm $(bin_name)
+
+
+test_clean:
+	rm -rf $(build_dir)
+	rm $(test_bin_name)
 
 
 # install target for "sudo make install"

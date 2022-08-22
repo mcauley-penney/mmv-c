@@ -1,8 +1,8 @@
-#include "mmv.h"
+#include "../inc/mmv.h"
 
 int main(int argc, char *argv[])
 {
-    struct Map *rename_map = make_str_hashmap(argc, argv);
+    struct Set *rename_map = make_str_set(argc, argv);
     if (rename_map == NULL)
         exit(EXIT_FAILURE);
 
@@ -20,12 +20,12 @@ int main(int argc, char *argv[])
         goto rm_path_out;
 
     rm_path(tmp_path);
-    free_hashmap(rename_map);
+    free_str_set(rename_map);
 
     return EXIT_SUCCESS;
 
 rm_path_out:
     rm_path(tmp_path);
-    free_hashmap(rename_map);
+    free_str_set(rename_map);
     return EXIT_FAILURE;
 }

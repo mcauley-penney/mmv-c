@@ -8,25 +8,18 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
 
-    # would normally include dependency installation
-    # here, but mmv currently has none
-
     - name: build executable
       run: make
 
-    - name: install
+    - name: test install
       run: sudo make install
 
-    - name: check for valid install
-      run: command -v mmv
-
-    - name: uninstall
+    - name: test uninstall
       run: sudo make uninstall
 
     - name: clean up
