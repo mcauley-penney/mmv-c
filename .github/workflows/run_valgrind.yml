@@ -26,5 +26,4 @@ jobs:
       run: make debug
 
     - name: Execute Valgrind
-      run: valgrind --leak-check=full --trace-children=yes --track-origins=yes \
-            --show-leak-kinds=all -s ./debug_mmv "$test_files_dir"/test*
+      run: valgrind --leak-check=full --track-origins=yes --show-leak-kinds=all -s ./debug_mmv "$test_files_dir"/test*
