@@ -43,7 +43,6 @@ all:
 
 test:
 	$(CC) $(CFLAGS) $(test_src_files) $(src_files) -o test_$(bin_name)
-	./test_$(bin_name)
 
 
 debug:

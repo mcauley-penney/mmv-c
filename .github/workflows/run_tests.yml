@@ -1,0 +1,23 @@
+name: Run Unit Tests
+
+on:
+  push:
+    branches: '**'
+  pull_request:
+    branches: '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build test executable
+      run: make test
+
+    - name: Run test executable
+      run: ./test_mmv
+
+    - name: Clean up test executable
+      run: make test_clean
