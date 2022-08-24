@@ -29,7 +29,7 @@ struct Set *make_str_set(int arg_count, char *args[])
 
     // start at 1 to avoid reading program invocation
     for (i = 1; i < u_arg_count; i++)
-        if (str_set_insert(args[i], map_capacity, set) == 0)
+        if (str_set_insert(args[i], map_capacity, set) == -1)
         {
             free_str_set(set);
             return NULL;
@@ -77,7 +77,7 @@ int str_set_insert(char *cur_str, const unsigned int map_space, struct Set *set)
         return 0;
 
     if (cpy_str_to_arr(&set->map[hash], cur_str) == NULL)
-        return 0;
+        return -1;
 
     set->keys[set->num_keys] = hash;
     set->num_keys++;
