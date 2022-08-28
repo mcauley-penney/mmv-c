@@ -179,7 +179,7 @@ int open_file_in_editor(const char *path)
     return 0;
 }
 
-int rename_filesystem_items(struct Set *map, char path[])
+int rename_filesystem_items(struct Set *set, char path[])
 {
     char cur_str[PATH_MAX], *read_ptr = "";
     size_t i = 0;
@@ -191,14 +191,14 @@ int rename_filesystem_items(struct Set *map, char path[])
         return errno;
     }
 
-    while (read_ptr != NULL && i < map->num_keys)
+    while (read_ptr != NULL && i < set->num_keys)
     {
         read_ptr = fgets(cur_str, PATH_MAX, tmp_fptr);
 
         if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
         {
             cur_str[strlen(cur_str) - 1] = '\0';
-            rename_path(map->map[map->keys[i]], cur_str);
+            rename_path(set->map[set->keys[i]], cur_str);
             i++;
         }
     }
