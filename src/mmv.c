@@ -38,11 +38,13 @@ struct Set *make_str_set(int arg_count, char *args[])
     return set;
 }
 
-struct Set *alloc_str_set(const unsigned int num_names, const unsigned int map_size)
+struct Set *alloc_str_set(
+    const unsigned int num_names, const unsigned int map_size)
 {
     unsigned int i;
 
-    struct Set *set = malloc(sizeof(struct Set) + (num_names - 1) * sizeof(int));
+    struct Set *set =
+        malloc(sizeof(struct Set) + (num_names - 1) * sizeof(int));
     if (set == NULL)
         return NULL;
 
@@ -63,7 +65,7 @@ struct Set *alloc_str_set(const unsigned int num_names, const unsigned int map_s
 
 int str_set_insert(char *cur_str, const unsigned int map_space, struct Set *set)
 {
-    int dupe_found = -1;
+    int dupe_found    = -1;
     unsigned int hash = hash_str(cur_str, map_space);
 
     while (set->map[hash] != NULL && dupe_found != 0)
@@ -88,12 +90,13 @@ int str_set_insert(char *cur_str, const unsigned int map_space, struct Set *set)
 unsigned int hash_str(char *str, const unsigned int set_capacity)
 {
     unsigned char *s = (unsigned char *)str;
-    Fnv32_t hval = ((Fnv32_t)0x811c9dc5);
+    Fnv32_t hval     = ((Fnv32_t)0x811c9dc5);
 
     while (*s)
     {
         hval ^= (Fnv32_t)*s++;
-        hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
+        hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) +
+                (hval << 24);
     }
 
     return hval % set_capacity;
@@ -118,7 +121,10 @@ int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
     FILE *tmp_fptr = open_tmp_path_fptr(tmp_path_template);
     if (tmp_fptr == NULL)
     {
-        fprintf(stderr, "mmv: failed to open \"%s\": %s\n", tmp_path_template, strerror(errno));
+        fprintf(stderr,
+            "mmv: failed to open \"%s\": %s\n",
+            tmp_path_template,
+            strerror(errno));
         return errno;
     }
 
@@ -168,7 +174,10 @@ int open_file_in_editor(const char *path)
     // open temporary file containing argv using editor of choice
     if (system(edit_cmd) != 0)
     {
-        fprintf(stderr, "mmv: \'%s\' returned non-zero exit status: %d\n", editor_name, ret);
+        fprintf(stderr,
+            "mmv: \'%s\' returned non-zero exit status: %d\n",
+            editor_name,
+            ret);
         free(edit_cmd);
         return errno;
     }
@@ -187,7 +196,10 @@ int rename_filesystem_items(struct Set *set, char path[])
     FILE *tmp_fptr = fopen(path, "r");
     if (tmp_fptr == NULL)
     {
-        fprintf(stderr, "mmv: failed to open \"%s\" in \"r\" mode: %s\n", path, strerror(errno));
+        fprintf(stderr,
+            "mmv: failed to open \"%s\" in \"r\" mode: %s\n",
+            path,
+            strerror(errno));
         return errno;
     }
 
@@ -211,13 +223,17 @@ int rename_filesystem_items(struct Set *set, char path[])
 void rename_path(const char *src, const char *dest)
 {
     if (rename(src, dest) == -1)
-        fprintf(stderr, "mmv: \'%s\' to \'%s\': %s\n", src, dest, strerror(errno));
+        fprintf(
+            stderr, "mmv: \'%s\' to \'%s\': %s\n", src, dest, strerror(errno));
 }
 
 void rm_path(char *path)
 {
     if (remove(path) == -1)
-        fprintf(stderr, "mmv: failed to delete \'%s\': %s\n", path, strerror(errno));
+        fprintf(stderr,
+            "mmv: failed to delete \'%s\': %s\n",
+            path,
+            strerror(errno));
 }
 
 void free_str_set(struct Set *map)

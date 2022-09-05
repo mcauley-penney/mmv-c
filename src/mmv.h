@@ -31,7 +31,8 @@ struct Set
  */
 struct Set *make_str_set(int argc, char *argv[]);
 
-struct Set *alloc_str_set(const unsigned int num_args, const unsigned int map_size);
+struct Set *alloc_str_set(
+    const unsigned int num_args, const unsigned int map_size);
 
 int str_set_insert(char *cur_str, const unsigned int map_size, struct Set *map);
 
