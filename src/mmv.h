@@ -5,14 +5,14 @@
  */
 
 #include <errno.h>
+#include <getopt.h>
 #include <limits.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <getopt.h>
 
 #define PROG_NAME	 "mmv"
 #define PROG_VERSION "version 0.2.0"

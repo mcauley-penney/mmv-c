@@ -1,5 +1,31 @@
 #include "mmv.h"
 
+struct Opts *make_opts()
+{
+	struct Opts *opts = malloc(sizeof(struct Opts));
+	if (opts == NULL)
+	{
+		perror("mmv: failed to allocate memory for user flags\n");
+		return NULL;
+	}
+
+	opts->verbose = false;
+
+	return opts;
+}
+
+void usage()
+{
+	printf("Usage: %s [OPTION] SOURCES\n\n", PROG_NAME);
+	puts("Rename or move SOURCE(s) by editing them in $EDITOR.");
+	printf("For full documentation, see man %s\n", PROG_NAME);
+}
+
+void try_help()
+{
+	puts("Try 'mmv -h'for more information");
+}
+
 struct Set *make_str_set(int arg_count, char *args[])
 {
 	if (arg_count == 0)
@@ -42,8 +68,7 @@ struct Set *alloc_str_set(
 {
 	unsigned int i;
 
-	struct Set *set =
-		malloc(sizeof(struct Set) + num_names * sizeof(int));
+	struct Set *set = malloc(sizeof(struct Set) + num_names * sizeof(int));
 	if (set == NULL)
 		return NULL;
 
@@ -106,7 +131,7 @@ char *cpy_str_to_arr(char **arr_dest, const char *src_str)
 	*arr_dest = malloc((strlen(src_str) + 1) * sizeof(char));
 	if (arr_dest == NULL)
 	{
-		perror("mmv: failed to allocate memory for new map node source str");
+		perror("mmv: failed to allocate memory for new map node source str\n");
 		return NULL;
 	}
 
