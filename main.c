@@ -2,30 +2,70 @@
 
 int main(int argc, char *argv[])
 {
-    struct Set *mmv_set = make_str_set(argc, argv);
-    if (mmv_set == NULL)
-        exit(EXIT_FAILURE);
+	int cur_flag;
+	char short_opts[]	 = "hvV";
 
-    char tmp_path[] = "/tmp/mmv_XXXXXX";
+	struct Opts *options = make_opts();
+	if (options == NULL)
+		return EXIT_FAILURE;
 
-    umask(077);
+	while ((cur_flag = getopt(argc, argv, short_opts)) != -1)
+	{
+		switch (cur_flag)
+		{
+		case 'v':
+			options->verbose = true;
+			break;
 
-    if (write_strarr_to_tmpfile(mmv_set, tmp_path) != 0)
-        goto rm_path_out;
+		case 'h':
+			free(options);
+			usage();
+			return EXIT_SUCCESS;
 
-    if (open_file_in_editor(tmp_path) != 0)
-        goto rm_path_out;
+		case 'V':
+			free(options);
+			puts(PROG_VERSION);
+			return EXIT_SUCCESS;
 
-    if (rename_filesystem_items(mmv_set, tmp_path) != 0)
-        goto rm_path_out;
+		default:
+			free(options);
+			try_help();
+			return EXIT_FAILURE;
+		}
+	}
 
-    rm_path(tmp_path);
-    free_str_set(mmv_set);
+	argv += optind;
+	argc -= optind;
 
-    return EXIT_SUCCESS;
+	struct Set *mmv_set = make_str_set(argc, argv);
+	if (mmv_set == NULL)
+	{
+		free(options);
+		return EXIT_FAILURE;
+	}
+
+	char tmp_path[] = "/tmp/mmv_XXXXXX";
+
+	umask(077);
+
+	if (write_strarr_to_tmpfile(mmv_set, tmp_path) != 0)
+		goto rm_path_out;
+
+	if (open_file_in_editor(tmp_path) != 0)
+		goto rm_path_out;
+
+	if (rename_filesystem_items(options, mmv_set, tmp_path) != 0)
+		goto rm_path_out;
+
+	rm_path(tmp_path);
+	free(options);
+	free_str_set(mmv_set);
+
+	return EXIT_SUCCESS;
 
 rm_path_out:
-    rm_path(tmp_path);
-    free_str_set(mmv_set);
-    return EXIT_FAILURE;
+	rm_path(tmp_path);
+	free(options);
+	free_str_set(mmv_set);
+	return EXIT_FAILURE;
 }
