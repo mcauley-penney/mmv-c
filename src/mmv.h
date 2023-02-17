@@ -14,9 +14,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define PROG_NAME	 "mmv"
+#define PROG_NAME    "mmv"
 #define PROG_VERSION "version 0.2.0"
-#define PROG_REMOTE	 "https://github.com/mcauley-penney/mmv-c"
+#define PROG_REMOTE  "https://github.com/mcauley-penney/mmv-c"
 
 typedef u_int32_t Fnv32_t;
 
@@ -65,7 +65,8 @@ struct Set *make_str_set(int argc, char *argv[]);
  * @param map_size
  */
 struct Set *alloc_str_set(
-	const unsigned int num_args, const unsigned int map_size);
+    const unsigned int num_args, const unsigned int map_size
+);
 
 /**
  * @brief Insert a string into the given Set struct
@@ -75,7 +76,9 @@ struct Set *alloc_str_set(
  * @param map
  * @return
  */
-int str_set_insert(char *cur_str, const unsigned int map_space, struct Set *set);
+int str_set_insert(
+    char *cur_str, const unsigned int map_space, struct Set *set
+);
 
 /**
  * @brief hashes a string with the Fowler–Noll–Vo 1a 32bit hash fn

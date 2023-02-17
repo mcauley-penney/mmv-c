@@ -3,34 +3,31 @@
 int main(int argc, char *argv[])
 {
 	int cur_flag;
-	char short_opts[]	 = "hvV";
+	char short_opts[] = "hvV";
 
 	struct Opts *options = make_opts();
-	if (options == NULL)
-		return EXIT_FAILURE;
+	if (options == NULL) return EXIT_FAILURE;
 
 	while ((cur_flag = getopt(argc, argv, short_opts)) != -1)
 	{
 		switch (cur_flag)
 		{
-		case 'v':
-			options->verbose = true;
-			break;
+			case 'v': options->verbose = true; break;
 
-		case 'h':
-			free(options);
-			usage();
-			return EXIT_SUCCESS;
+			case 'h':
+				free(options);
+				usage();
+				return EXIT_SUCCESS;
 
-		case 'V':
-			free(options);
-			puts(PROG_VERSION);
-			return EXIT_SUCCESS;
+			case 'V':
+				free(options);
+				puts(PROG_VERSION);
+				return EXIT_SUCCESS;
 
-		default:
-			free(options);
-			try_help();
-			return EXIT_FAILURE;
+			default:
+				free(options);
+				try_help();
+				return EXIT_FAILURE;
 		}
 	}
 
@@ -48,11 +45,9 @@ int main(int argc, char *argv[])
 
 	umask(077);
 
-	if (write_strarr_to_tmpfile(mmv_set, tmp_path) != 0)
-		goto rm_path_out;
+	if (write_strarr_to_tmpfile(mmv_set, tmp_path) != 0) goto rm_path_out;
 
-	if (open_file_in_editor(tmp_path) != 0)
-		goto rm_path_out;
+	if (open_file_in_editor(tmp_path) != 0) goto rm_path_out;
 
 	if (rename_filesystem_items(options, mmv_set, tmp_path) != 0)
 		goto rm_path_out;

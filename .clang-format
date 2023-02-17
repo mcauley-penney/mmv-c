@@ -1,0 +1,30 @@
+﻿---
+BasedOnStyle: Microsoft
+AlignAfterOpenBracket: BlockIndent
+AlignConsecutiveMacros: 'true'
+AlignConsecutiveAssignments: 'true'
+AlignConsecutiveDeclarations: 'false'
+AlignEscapedNewlines: Left
+AlignOperands: 'true'
+AlignTrailingComments: 'true'
+AllowAllArgumentsOnNextLine: 'true'
+AllowAllConstructorInitializersOnNextLine: 'true'
+AllowAllParametersOfDeclarationOnNextLine: 'true'
+AllowShortBlocksOnASingleLine: 'false'
+AllowShortCaseLabelsOnASingleLine: 'true'
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Always
+AllowShortLoopsOnASingleLine: 'false'
+BreakBeforeBraces: Allman
+ColumnLimit: '80'
+IndentCaseLabels: 'true'
+IndentPPDirectives: BeforeHash
+KeepEmptyLinesAtTheStartOfBlocks: 'false'
+MaxEmptyLinesToKeep: '2'
+TabWidth: '4'
+UseTab: ForIndentation
+
+...
+
+# docs: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+# configurator: https://zed0.co.uk/clang-format-configurator/
