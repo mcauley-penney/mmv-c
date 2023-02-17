@@ -1,6 +1,6 @@
 #include "mmv.h"
 
-struct Opts *make_opts()
+struct Opts *make_opts(void)
 {
 	struct Opts *opts = malloc(sizeof(struct Opts));
 	if (opts == NULL)
@@ -14,14 +14,14 @@ struct Opts *make_opts()
 	return opts;
 }
 
-void usage()
+void usage(void)
 {
 	printf("Usage: %s [OPTION] SOURCES\n\n", PROG_NAME);
 	puts("Rename or move SOURCE(s) by editing them in $EDITOR.");
 	printf("For full documentation, see man %s\n", PROG_NAME);
 }
 
-void try_help()
+void try_help(void)
 {
 	puts("Try 'mmv -h'for more information");
 }
