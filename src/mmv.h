@@ -146,6 +146,9 @@ int read_tmp_file_strs(
     char **dest_arr, int *dest_size, struct Set *set, char path[]
 );
 
+
+void free_str_arr(char **arr, int arr_size);
+
 /* TODO: */
 int rename_filesystem_items(
     struct Opts *options, struct Set *src_set, struct Set *dest_set

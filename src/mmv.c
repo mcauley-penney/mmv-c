@@ -230,11 +230,15 @@ struct Set *make_dest_str_set(struct Set *src_set, char path[])
 
 	if (read_tmp_file_strs(dest_arr, &dest_size, src_set, path) != 0)
 	{
-		free(dest_arr);
+		free_str_arr(dest_arr, dest_size);
 		return NULL;
 	}
 
-	return make_str_set(dest_size, dest_arr, true);
+	struct Set *set = make_str_set(dest_size, dest_arr, true);
+
+	free_str_arr(dest_arr, dest_size);
+
+	return set;
 }
 
 int read_tmp_file_strs(
@@ -272,6 +276,14 @@ int read_tmp_file_strs(
 	fclose(tmp_fptr);
 
 	return EXIT_SUCCESS;
+}
+
+void free_str_arr(char **arr, int arr_size)
+{
+	for (int i = 0; i < arr_size; i++)
+		free(arr[i]);
+
+	free(arr);
 }
 
 int rename_filesystem_items(
