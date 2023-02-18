@@ -34,33 +34,38 @@ int main(int argc, char *argv[])
 	argv += optind;
 	argc -= optind;
 
-	struct Set *mmv_set = make_str_set(argc, argv);
-	if (mmv_set == NULL)
-	{
-		free(options);
-		return EXIT_FAILURE;
-	}
+	struct Set *src_set = make_str_set(argc, argv, false);
+	if (src_set == NULL) goto free_opts_out;
 
 	char tmp_path[] = "/tmp/mmv_XXXXXX";
 
 	umask(077);
 
-	if (write_strarr_to_tmpfile(mmv_set, tmp_path) != 0) goto rm_path_out;
+	if (write_strarr_to_tmpfile(src_set, tmp_path) != 0) goto free_src_out;
 
 	if (open_file_in_editor(tmp_path) != 0) goto rm_path_out;
 
-	if (rename_filesystem_items(options, mmv_set, tmp_path) != 0)
-		goto rm_path_out;
+	struct Set *dest_set = make_dest_str_set(src_set, tmp_path);
+	if (dest_set == NULL) goto rm_path_out;
 
+	rename_filesystem_items(options, src_set, dest_set);
+
+	free_str_set(dest_set);
 	rm_path(tmp_path);
+	free_str_set(src_set);
 	free(options);
-	free_str_set(mmv_set);
+
 
 	return EXIT_SUCCESS;
 
+
 rm_path_out:
 	rm_path(tmp_path);
+
+free_src_out:
+	free_str_set(src_set);
+
+free_opts_out:
 	free(options);
-	free_str_set(mmv_set);
 	return EXIT_FAILURE;
 }

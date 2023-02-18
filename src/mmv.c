@@ -26,7 +26,7 @@ void try_help(void)
 	puts("Try 'mmv -h'for more information");
 }
 
-struct Set *make_str_set(int arg_count, char *args[])
+struct Set *make_str_set(const int arg_count, char *args[], bool track_dupes)
 {
 	if (arg_count == 0)
 	{
@@ -54,7 +54,7 @@ struct Set *make_str_set(int arg_count, char *args[])
 	}
 
 	for (i = 0; i < u_arg_count; i++)
-		if (str_set_insert(args[i], map_capacity, set) == -1)
+		if (str_set_insert(args[i], map_capacity, set, track_dupes) == -1)
 		{
 			free_str_set(set);
 			return NULL;
@@ -87,7 +87,10 @@ struct Set *alloc_str_set(
 	return set;
 }
 
-int str_set_insert(char *cur_str, const unsigned int map_space, struct Set *set)
+int str_set_insert(
+    char *cur_str, const unsigned int map_space, struct Set *set,
+    bool track_dupes
+)
 {
 	int dupe_found    = -1;
 	unsigned int hash = hash_str(cur_str, map_space);
@@ -99,11 +102,20 @@ int str_set_insert(char *cur_str, const unsigned int map_space, struct Set *set)
 
 		hash = (hash + 1 < map_space) ? hash + 1 : 0;
 	}
-	if (dupe_found == 0) return 0;
+	if (dupe_found == 0)
+	{
+		if (track_dupes)
+		{
+			set->keys[set->num_keys] = -1;
+			set->num_keys++;
+		}
+
+		return 0;
+	}
 
 	if (cpy_str_to_arr(&set->map[hash], cur_str) == NULL) return -1;
 
-	set->keys[set->num_keys] = hash;
+	set->keys[set->num_keys] = (int)hash;
 	set->num_keys++;
 
 	return 1;
@@ -207,7 +219,27 @@ int open_file_in_editor(const char *path)
 	return EXIT_SUCCESS;
 }
 
-int rename_filesystem_items(struct Opts *options, struct Set *set, char path[])
+struct Set *make_dest_str_set(struct Set *src_set, char path[])
+{
+	// size of destination array only needs to be, at
+	// maximum, the number of keys in the source set
+	char **dest_arr = malloc(sizeof(char *) * src_set->num_keys);
+	if (dest_arr == NULL) return NULL;
+
+	int dest_size = 0;
+
+	if (read_tmp_file_strs(dest_arr, &dest_size, src_set, path) != 0)
+	{
+		free(dest_arr);
+		return NULL;
+	}
+
+	return make_str_set(dest_size, dest_arr, true);
+}
+
+int read_tmp_file_strs(
+    char **dest_arr, int *dest_size, struct Set *set, char path[]
+)
 {
 	char cur_str[PATH_MAX], *read_ptr = "";
 	size_t i = 0;
@@ -229,12 +261,43 @@ int rename_filesystem_items(struct Opts *options, struct Set *set, char path[])
 		if (read_ptr != NULL && strcmp(cur_str, "\n") != 0)
 		{
 			cur_str[strlen(cur_str) - 1] = '\0';
-			rename_path(options, set->map[set->keys[i]], cur_str);
+
+			cpy_str_to_arr(&dest_arr[(*dest_size)], cur_str);
+			(*dest_size)++;
+
 			i++;
 		}
 	}
 
 	fclose(tmp_fptr);
+
+	return EXIT_SUCCESS;
+}
+
+int rename_filesystem_items(
+    struct Opts *options, struct Set *src_set, struct Set *dest_set
+)
+{
+	size_t i;
+	int src_key, dest_key;
+	char *src_str;
+
+	for (i = 0; i < src_set->num_keys; i++)
+	{
+		dest_key = dest_set->keys[i];
+		src_key  = src_set->keys[i];
+		src_str  = src_set->map[src_key];
+
+		if (dest_key != -1)
+			rename_path(options, src_str, dest_set->map[dest_key]);
+
+		else
+			printf(
+			    "mmv: duplicate dest found for src '%s'. No rename "
+			    "conducted.\n",
+			    src_str
+			);
+	}
 
 	return EXIT_SUCCESS;
 }
@@ -247,7 +310,7 @@ void rename_path(struct Opts *options, const char *src, const char *dest)
 		);
 
 	else if (options->verbose)
-		printf("Renamed '%s' -> '%s'\n", src, dest);
+		printf("renamed '%s' -> '%s'\n", src, dest);
 }
 
 void rm_path(char *path)
@@ -261,12 +324,13 @@ void rm_path(char *path)
 void free_str_set(struct Set *map)
 {
 	size_t i;
-	unsigned int key;
+	int key;
 
 	for (i = 0; i < map->num_keys; i++)
 	{
 		key = map->keys[i];
-		free(map->map[key]);
+
+		if (key != -1) free(map->map[key]);
 	}
 
 	free(map->map);

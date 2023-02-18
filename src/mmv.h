@@ -29,7 +29,7 @@ struct Set
 {
 	size_t num_keys;
 	char **map;
-	unsigned int keys[];
+	int keys[];
 };
 
 /**
@@ -49,14 +49,14 @@ void usage(void);
 void try_help(void);
 
 /**
- * @brief Create a hashmap of strings from argv
+ * @brief Create a set of strings from argv
  *
  * @param argv
  * @param argc
  * @param ***map: pointer to a string array
  * @param **key: pointer to MapKeyArr struct
  */
-struct Set *make_str_set(int argc, char *argv[]);
+struct Set *make_str_set(const int arg_count, char *args[], bool track_dupes);
 
 /**
  * @brief Allocate memory for members of a Set struct
@@ -77,7 +77,8 @@ struct Set *alloc_str_set(
  * @return
  */
 int str_set_insert(
-    char *cur_str, const unsigned int map_space, struct Set *set
+    char *cur_str, const unsigned int map_space, struct Set *set,
+    bool track_dupes
 );
 
 /**
@@ -125,6 +126,9 @@ FILE *__attribute__((malloc)) open_tmp_path_fptr(char *tmp_path);
  */
 int open_file_in_editor(const char *path);
 
+/* TODO: */
+struct Set *make_dest_str_set(struct Set *src_set, char path[]);
+
 
 /**
  * @brief reads lines out of a file path and renames item at corresponding
@@ -138,7 +142,14 @@ int open_file_in_editor(const char *path);
  * @param path: path to temp file containing new names
  * @return errno or 0 for success
  */
-int rename_filesystem_items(struct Opts *options, struct Set *set, char path[]);
+int read_tmp_file_strs(
+    char **dest_arr, int *dest_size, struct Set *set, char path[]
+);
+
+/* TODO: */
+int rename_filesystem_items(
+    struct Opts *options, struct Set *src_set, struct Set *dest_set
+);
 
 /**
  * @brief renames an item in file system
