@@ -1,9 +1,8 @@
 ﻿---
-BasedOnStyle: Microsoft
 AlignAfterOpenBracket: BlockIndent
-AlignConsecutiveMacros: 'true'
 AlignConsecutiveAssignments: 'true'
 AlignConsecutiveDeclarations: 'false'
+AlignConsecutiveMacros: 'true'
 AlignEscapedNewlines: Left
 AlignOperands: 'true'
 AlignTrailingComments: 'true'
@@ -13,14 +12,16 @@ AllowAllParametersOfDeclarationOnNextLine: 'true'
 AllowShortBlocksOnASingleLine: 'false'
 AllowShortCaseLabelsOnASingleLine: 'true'
 AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: Always
+AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLoopsOnASingleLine: 'false'
+BasedOnStyle: Microsoft
 BreakBeforeBraces: Allman
 ColumnLimit: '80'
 IndentCaseLabels: 'true'
 IndentPPDirectives: BeforeHash
 KeepEmptyLinesAtTheStartOfBlocks: 'false'
 MaxEmptyLinesToKeep: '2'
+SeparateDefinitionBlocks : Always
 TabWidth: '4'
 UseTab: ForIndentation
 
