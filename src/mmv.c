@@ -26,7 +26,9 @@ void try_help(void)
 	puts("Try 'mmv -h'for more information");
 }
 
-struct Set *make_str_set(const int arg_count, char *args[], bool track_dupes)
+struct Set *make_str_set(
+    bool resolve_paths, const int arg_count, char *args[], bool track_dupes
+)
 {
 	if (arg_count == 0)
 	{
@@ -53,12 +55,19 @@ struct Set *make_str_set(const int arg_count, char *args[], bool track_dupes)
 		return NULL;
 	}
 
+	char *cur_str;
+
 	for (i = 0; i < u_arg_count; i++)
-		if (str_set_insert(args[i], map_capacity, set, track_dupes) == -1)
+	{
+		cur_str = args[i];
+		if (resolve_paths) cur_str = realpath(cur_str, NULL);
+
+		if (str_set_insert(cur_str, map_capacity, set, track_dupes) == -1)
 		{
 			free_str_set(set);
 			return NULL;
 		}
+	}
 
 	return set;
 }
@@ -234,7 +243,7 @@ struct Set *make_dest_str_set(struct Set *src_set, char path[])
 		return NULL;
 	}
 
-	struct Set *set = make_str_set(dest_size, dest_arr, true);
+	struct Set *set = make_str_set(false, dest_size, dest_arr, true);
 
 	free_str_arr(dest_arr, dest_size);
 
@@ -287,7 +296,7 @@ void free_str_arr(char **arr, int arr_size)
 }
 
 int rename_filesystem_items(
-    struct Opts *options, struct Set *src_set, struct Set *dest_set
+    struct Set *src_set, struct Set *dest_set, struct Opts *options
 )
 {
 	size_t i;
@@ -301,12 +310,11 @@ int rename_filesystem_items(
 		src_str  = src_set->map[src_key];
 
 		if (dest_key != -1)
-			rename_path(options, src_str, dest_set->map[dest_key]);
+			rename_path(src_str, dest_set->map[dest_key], options);
 
 		else
 			printf(
-			    "mmv: duplicate dest found for src '%s'. No rename "
-			    "conducted.\n",
+			    "mmv: duplicate dest found for src '%s'. No mv conducted.\n",
 			    src_str
 			);
 	}
@@ -314,7 +322,7 @@ int rename_filesystem_items(
 	return EXIT_SUCCESS;
 }
 
-void rename_path(struct Opts *options, const char *src, const char *dest)
+void rename_path(const char *src, const char *dest, struct Opts *options)
 {
 	if (rename(src, dest) == -1)
 		fprintf(

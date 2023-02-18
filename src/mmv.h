@@ -22,6 +22,7 @@ typedef u_int32_t Fnv32_t;
 
 struct Opts
 {
+	bool resolve_paths;
 	bool verbose;
 };
 
@@ -56,7 +57,9 @@ void try_help(void);
  * @param ***map: pointer to a string array
  * @param **key: pointer to MapKeyArr struct
  */
-struct Set *make_str_set(const int arg_count, char *args[], bool track_dupes);
+struct Set *make_str_set(
+    bool resolve_paths, const int arg_count, char *args[], bool track_dupes
+);
 
 /**
  * @brief Allocate memory for members of a Set struct
@@ -108,7 +111,8 @@ char *cpy_str_to_arr(char **array_pos, const char *src_str);
  * @param keys: struct containing list of keys to node locations in
  *      hashmap
  */
-int write_strarr_to_tmpfile(struct Set *map, char tmppath[]);
+int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[]);
+
 
 /**
  * @brief opens the given path and returns its file pointer
@@ -131,6 +135,7 @@ struct Set *make_dest_str_set(struct Set *src_set, char path[]);
 
 
 /**
+ * TOOD:
  * @brief reads lines out of a file path and renames item at corresponding
  *      position in hashmap to newly-read line.
  *
@@ -151,7 +156,7 @@ void free_str_arr(char **arr, int arr_size);
 
 /* TODO: */
 int rename_filesystem_items(
-    struct Opts *options, struct Set *src_set, struct Set *dest_set
+    struct Set *src_set, struct Set *dest_set, struct Opts *options
 );
 
 /**
@@ -161,7 +166,7 @@ int rename_filesystem_items(
  * @param src: old name
  * @param dest: new name
  */
-void rename_path(struct Opts *options, const char *src, const char *dest);
+void rename_path(const char *src, const char *dest, struct Opts *options);
 
 /**
  * @brief deletes an item at the given path in the file system
