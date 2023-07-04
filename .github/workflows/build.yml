@@ -1,32 +1,61 @@
-name: Build
+name: Build and Exercise
 
 on:
   push:
-    branches: '**'
+    paths:
+      - "Makefile"
+      - "src/**"
+      - "main.c"
+
   pull_request:
-    branches: '**'
+    branches:
+      - "main"
+    paths:
+      - "Makefile"
+      - "src/**"
+      - "main.c"
 
 jobs:
-  build:
+  Build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Build primary executable
-      run: make
+      - name: Build primary executable
+        run: make
 
-    - name: Exercise install
-      run: sudo make install
+      - name: Exercise install
+        run: sudo make install
 
-    - name: Exercise uninstall
-      run: sudo make uninstall
+      - name: Exercise uninstall
+        run: sudo make uninstall
 
-    - name: Clean up primary build
-      run: make clean
+      - name: Clean up primary build
+        run: make clean
 
-    - name: Build debug executable
-      run: make debug
+      - name: Build debug executable
+        run: make debug
 
-    - name: Clean up debug build
-      run: make debug_clean
+      - name: Clean up debug build
+        run: make debug_clean
+
+  Run_Valgrind:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      test_files_dir: test_dir
+      utils: .github/utils
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: sudo apt-get -y install valgrind
+
+      - name: Create test files
+        run: sh "$utils"/init_files.sh "$test_files_dir" 10
+
+      - name: Build debug executable
+        run: make debug
+
+      - name: Execute Valgrind
+        run: valgrind --leak-check=full --track-origins=yes --show-leak-kinds=all -s ./debug_mmv "$test_files_dir"/test*

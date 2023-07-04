@@ -1,6 +1,5 @@
 # mmv-c 📦
 ![Build](https://github.com/mcauley-penney/mmv-c/actions/workflows/build.yml/badge.svg)
-![Valgrind](https://github.com/mcauley-penney/mmv-c/actions/workflows/run_valgrind.yml/badge.svg)
 
 Edit file and directory names in `$EDITOR`. Inspired by [itchyny/mmv](https://github.com/itchyny/mmv).
 
