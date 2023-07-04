@@ -1,0 +1,29 @@
+name: Update man pages
+on:
+  push:
+    paths:
+      - "man/mmv.1.md"
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - "man/mmv.1.md"
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Convert Markdown to man page
+        uses: docker://pandoc/core:3.1
+        with:
+          args: "man/mmv.1.md -s -t man -o man/mmv.1.gz"
+
+      - name: Push changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "chore(build): auto-generate vimdoc"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
