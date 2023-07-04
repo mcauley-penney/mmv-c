@@ -7,11 +7,11 @@
 # files and directories
 # -------------------------------------------------------------------
 bin_name = mmv
-man_name = mmv.1.gz
+man_name = $(bin_name).1.gz
 
 prefix = /usr/local
-bindir = $(prefix)/bin
-mandir = $(prefix)/man/man1
+bin_dir = $(prefix)/bin
+man_dir = $(prefix)/man/man1
 
 src_dir = src
 inc_dir = inc
@@ -73,11 +73,11 @@ debug_clean:
 # install target for "sudo make install"
 install:
 	$(NORMAL_INSTALL)
-	install -m 007 $(bin_name) $(bindir)
-	cp ./man/$(man_name) $(mandir)/$(man_name)
+	install -m 007 $(bin_name) $(bin_dir)
+	cp ./man/$(man_name) $(man_dir)/$(man_name)
 
 
 uninstall:
 	$(NORMAL_UNINSTALL)
-	rm $(bindir)/$(bin_name)
-	rm $(mandir)/$(man_name)
+	rm $(bin_dir)/$(bin_name)
+	rm $(man_dir)/$(man_name)
