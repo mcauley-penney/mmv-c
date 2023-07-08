@@ -35,27 +35,31 @@ int main(int argc, char *argv[])
 	argv += optind;
 	argc -= optind;
 
-	struct Set *src_set =
-	    make_str_set(options->resolve_paths, argc, argv, false);
+	if (argc > MAX_OPS)
+	{
+		fprintf(stderr, "mmv: too many operands, use up to %u\n", MAX_OPS);
+		goto free_opts_out;
+	}
+
+	struct Set *src_set = set_init(options->resolve_paths, argc, argv, false);
 	if (src_set == NULL) goto free_opts_out;
 
 	char tmp_path[] = "/tmp/mmv_XXXXXX";
 
 	umask(077);
 
-	if (write_strarr_to_tmpfile(src_set, tmp_path) != 0)
-		goto free_src_out;
+	if (write_strarr_to_tmpfile(src_set, tmp_path) != 0) goto free_src_out;
 
-	if (open_file_in_editor(tmp_path) != 0) goto rm_path_out;
+	if (edit_tmpfile(tmp_path) != 0) goto rm_path_out;
 
-	struct Set *dest_set = make_dest_str_set(src_set, tmp_path);
+	struct Set *dest_set = init_dest_set(src_set->num_keys, tmp_path);
 	if (dest_set == NULL) goto rm_path_out;
 
-	rename_filesystem_items(src_set, dest_set, options);
+	rename_paths(src_set, dest_set, options);
 
-	free_str_set(dest_set);
+	set_destroy(dest_set);
 	rm_path(tmp_path);
-	free_str_set(src_set);
+	set_destroy(src_set);
 	free(options);
 
 
@@ -66,7 +70,7 @@ rm_path_out:
 	rm_path(tmp_path);
 
 free_src_out:
-	free_str_set(src_set);
+	set_destroy(src_set);
 
 free_opts_out:
 	free(options);

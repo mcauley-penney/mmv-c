@@ -1,4 +1,4 @@
-#include "mmv.h"
+#include "./mmv.h"
 
 struct Opts *make_opts(void)
 {
@@ -9,7 +9,8 @@ struct Opts *make_opts(void)
 		return NULL;
 	}
 
-	opts->verbose = false;
+	opts->resolve_paths = false;
+	opts->verbose       = false;
 
 	return opts;
 }
@@ -26,34 +27,28 @@ void try_help(void)
 	puts("Try 'mmv -h'for more information");
 }
 
-struct Set *make_str_set(
+struct Set *set_init(
     bool resolve_paths, const int arg_count, char *args[], bool track_dupes
 )
 {
 	if (arg_count == 0)
 	{
-		fprintf(stderr, "mmv: missing file operand\n");
+		fputs("mmv: missing file operand(s)", stderr);
 		return NULL;
 	}
 
 	unsigned int i;
-	const unsigned int u_arg_count = (unsigned int)arg_count;
+	const unsigned int u_arg_count       = (unsigned int)arg_count;
+	const unsigned long int map_capacity = (6 * (u_arg_count - 1)) + 1;
 
-	// (6 * (val - 1)) + 1 is a formula that creates a
-	// prime number using some value as a base. We are
-	// using this to create a prime hash map size to
-	// attempt to mitigate collisions. While the FNV
-	// hash is known to be of high quality and this is
-	// supposed to not be necessary, this is not heavy
-	// to implement and adds a layer of protection.
-	const unsigned int map_capacity = (6 * (u_arg_count - 1)) + 1;
-
-	struct Set *set = alloc_str_set(u_arg_count, map_capacity);
+	struct Set *set = set_alloc(map_capacity);
 	if (set == NULL)
 	{
-		perror("mmv: failed to allocate memory to initialize hashmap");
+		perror("mmv: failed to allocate memory to initialize string set\n");
 		return NULL;
 	}
+
+	set->map_capacity = map_capacity;
 
 	char *cur_str;
 
@@ -62,9 +57,13 @@ struct Set *make_str_set(
 		cur_str = args[i];
 		if (resolve_paths) cur_str = realpath(cur_str, NULL);
 
-		if (str_set_insert(cur_str, map_capacity, set, track_dupes) == -1)
+		if (set_insert(cur_str, set, track_dupes) == -1)
 		{
-			free_str_set(set);
+			set_destroy(set);
+			fprintf(
+			    stderr, "mmv: failed to insert \'%s\': %s\n", cur_str,
+			    strerror(errno)
+			);
 			return NULL;
 		}
 	}
@@ -72,16 +71,14 @@ struct Set *make_str_set(
 	return set;
 }
 
-struct Set *alloc_str_set(
-    const unsigned int num_names, const unsigned int map_size
-)
+struct Set *set_alloc(const unsigned long int map_capacity)
 {
 	unsigned int i;
 
-	struct Set *set = malloc(sizeof(struct Set) + num_names * sizeof(int));
+	struct Set *set = malloc(sizeof(struct Set));
 	if (set == NULL) return NULL;
 
-	set->map = malloc(sizeof(char *) * map_size);
+	set->map = malloc(sizeof(char *) * map_capacity);
 	if (set->map == NULL)
 	{
 		free(set);
@@ -90,28 +87,18 @@ struct Set *alloc_str_set(
 
 	set->num_keys = 0;
 
-	for (i = 0; i < map_size; i++)
+	for (i = 0; i < map_capacity; i++)
 		set->map[i] = NULL;
 
 	return set;
 }
 
-int str_set_insert(
-    char *cur_str, const unsigned int map_space, struct Set *set,
-    bool track_dupes
-)
+int set_insert(char *cur_str, struct Set *set, bool track_dupes)
 {
-	int dupe_found    = -1;
-	unsigned int hash = hash_str(cur_str, map_space);
+	long unsigned int hash = hash_str(cur_str, set->map_capacity);
+	int is_dupe            = is_duplicate_element(cur_str, set, &hash);
 
-	while (set->map[hash] != NULL && dupe_found != 0)
-	{
-		// strcmp returns 0 if strings are identical
-		dupe_found = strcmp(set->map[hash], cur_str);
-
-		hash = (hash + 1 < map_space) ? hash + 1 : 0;
-	}
-	if (dupe_found == 0)
+	if (is_dupe == 0)
 	{
 		if (track_dupes)
 		{
@@ -130,7 +117,7 @@ int str_set_insert(
 	return 1;
 }
 
-unsigned int hash_str(char *str, const unsigned int set_capacity)
+long unsigned int hash_str(char *str, const unsigned long int map_capacity)
 {
 	unsigned char *s = (unsigned char *)str;
 	Fnv32_t hval     = ((Fnv32_t)0x811c9dc5);
@@ -142,7 +129,7 @@ unsigned int hash_str(char *str, const unsigned int set_capacity)
 		        (hval << 24);
 	}
 
-	return hval % set_capacity;
+	return (long unsigned int)(hval % map_capacity);
 }
 
 char *cpy_str_to_arr(char **arr_dest, const char *src_str)
@@ -150,7 +137,7 @@ char *cpy_str_to_arr(char **arr_dest, const char *src_str)
 	*arr_dest = malloc((strlen(src_str) + 1) * sizeof(char));
 	if (arr_dest == NULL)
 	{
-		perror("mmv: failed to allocate memory for new map node source str\n");
+		perror("mmv: failed to allocate memory for new map str\n");
 		return NULL;
 	}
 
@@ -161,7 +148,7 @@ int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
 {
 	size_t i;
 
-	FILE *tmp_fptr = open_tmp_path_fptr(tmp_path_template);
+	FILE *tmp_fptr = open_tmpfile_fptr(tmp_path_template);
 	if (tmp_fptr == NULL)
 	{
 		fprintf(
@@ -176,10 +163,10 @@ int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
 
 	fclose(tmp_fptr);
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-FILE *__attribute__((malloc)) open_tmp_path_fptr(char *tmp_path)
+FILE *__attribute__((malloc)) open_tmpfile_fptr(char *tmp_path)
 {
 	int tmp_fd = mkstemp(tmp_path);
 	if (tmp_fd == -1) return NULL;
@@ -187,7 +174,7 @@ FILE *__attribute__((malloc)) open_tmp_path_fptr(char *tmp_path)
 	return fdopen(tmp_fd, "w");
 }
 
-int open_file_in_editor(const char *path)
+int edit_tmpfile(const char *path)
 {
 	int ret;
 	char *editor_name = getenv("EDITOR");
@@ -225,33 +212,33 @@ int open_file_in_editor(const char *path)
 
 	free(edit_cmd);
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-struct Set *make_dest_str_set(struct Set *src_set, char path[])
+struct Set *init_dest_set(unsigned int num_keys, char path[])
 {
 	// size of destination array only needs to be, at
 	// maximum, the number of keys in the source set
-	char **dest_arr = malloc(sizeof(char *) * src_set->num_keys);
+	char **dest_arr = malloc(sizeof(char *) * num_keys);
 	if (dest_arr == NULL) return NULL;
 
 	int dest_size = 0;
 
-	if (read_tmp_file_strs(dest_arr, &dest_size, src_set, path) != 0)
+	if (read_tmpfile_strs(dest_arr, &dest_size, num_keys, path) != 0)
 	{
-		free_str_arr(dest_arr, dest_size);
+		free_strarr(dest_arr, dest_size);
 		return NULL;
 	}
 
-	struct Set *set = make_str_set(false, dest_size, dest_arr, true);
+	struct Set *set = set_init(false, dest_size, dest_arr, true);
 
-	free_str_arr(dest_arr, dest_size);
+	free_strarr(dest_arr, dest_size);
 
 	return set;
 }
 
-int read_tmp_file_strs(
-    char **dest_arr, int *dest_size, struct Set *set, char path[]
+int read_tmpfile_strs(
+    char **dest_arr, int *dest_size, unsigned int num_keys, char path[]
 )
 {
 	char cur_str[PATH_MAX], *read_ptr = "";
@@ -267,7 +254,7 @@ int read_tmp_file_strs(
 		return errno;
 	}
 
-	while (read_ptr != NULL && i < set->num_keys)
+	while (read_ptr != NULL && i < num_keys)
 	{
 		read_ptr = fgets(cur_str, PATH_MAX, tmp_fptr);
 
@@ -284,10 +271,10 @@ int read_tmp_file_strs(
 
 	fclose(tmp_fptr);
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-void free_str_arr(char **arr, int arr_size)
+void free_strarr(char **arr, int arr_size)
 {
 	for (int i = 0; i < arr_size; i++)
 		free(arr[i]);
@@ -295,9 +282,7 @@ void free_str_arr(char **arr, int arr_size)
 	free(arr);
 }
 
-int rename_filesystem_items(
-    struct Set *src_set, struct Set *dest_set, struct Opts *options
-)
+int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 {
 	size_t i;
 	int src_key, dest_key;
@@ -310,7 +295,7 @@ int rename_filesystem_items(
 		src_str  = src_set->map[src_key];
 
 		if (dest_key != -1)
-			rename_path(src_str, dest_set->map[dest_key], options);
+			rename_path(src_str, dest_set->map[dest_key], opts);
 
 		else
 			printf(
@@ -319,18 +304,20 @@ int rename_filesystem_items(
 			);
 	}
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-void rename_path(const char *src, const char *dest, struct Opts *options)
+void rename_path(const char *src, const char *dest, struct Opts *opts)
 {
+	if (strcmp(src, dest) == 0) return;
+
 	if (rename(src, dest) == -1)
 		fprintf(
 		    stderr, "mmv: \'%s\' to \'%s\': %s\n", src, dest, strerror(errno)
 		);
 
-	else if (options->verbose)
-		printf("renamed '%s' -> '%s'\n", src, dest);
+	else if (opts->verbose)
+		printf("  '%s' -> '%s'\n", src, dest);
 }
 
 void rm_path(char *path)
@@ -341,7 +328,7 @@ void rm_path(char *path)
 		);
 }
 
-void free_str_set(struct Set *map)
+void set_destroy(struct Set *map)
 {
 	size_t i;
 	int key;
@@ -355,4 +342,23 @@ void free_str_set(struct Set *map)
 
 	free(map->map);
 	free(map);
+}
+
+
+int is_duplicate_element(
+    char *cur_str, struct Set *set, long unsigned int *hash
+)
+{
+	int dupe_found = -1;
+
+	while (set->map[*hash] != NULL && dupe_found != 0)
+	{
+		// strcmp returns 0 if strings are identical
+		dupe_found = strcmp(set->map[*hash], cur_str);
+
+		if (dupe_found != 0)
+			*hash = (*hash + 1 < set->map_capacity) ? *hash + 1 : 0;
+	}
+
+	return dupe_found;
 }
