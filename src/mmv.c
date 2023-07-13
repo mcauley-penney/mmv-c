@@ -344,6 +344,44 @@ void set_destroy(struct Set *map)
 	free(map);
 }
 
+int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
+{
+	size_t i;
+	int cur_src_key, cur_dest_key, is_dupe;
+	unsigned long int u_key;
+	char *cur_src_str, *cur_dest_str;
+
+	for (i = 0; i < dest_set->num_keys; i++)
+	{
+		cur_src_key  = src_set->keys[i];
+		cur_dest_key = dest_set->keys[i];
+		cur_src_str  = src_set->map[cur_src_key];
+		cur_dest_str = dest_set->map[cur_dest_key];
+
+		if (cur_dest_key != -1 && strcmp(cur_src_str, cur_dest_str) != 0)
+		{
+			u_key   = (unsigned int)cur_dest_key;
+			is_dupe = is_duplicate_element(cur_dest_str, src_set, &u_key);
+			char tmp_path[] = "mmv_cycle_XXXXXX";
+
+			if (is_dupe == 0)
+			{
+				// create temporary name using the current name
+				int tmp_fd = mkstemp(tmp_path);
+				if (tmp_fd == -1) return -1;
+
+				// rename to temporary name
+				rename_path(src_set->map[u_key], tmp_path, opts);
+
+				// update str in src map to temp_str
+				free(src_set->map[u_key]);
+				cpy_str_to_arr(&src_set->map[u_key], tmp_path);
+			}
+		}
+	}
+
+	return 0;
+}
 
 int is_duplicate_element(
     char *cur_str, struct Set *set, long unsigned int *hash

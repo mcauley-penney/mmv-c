@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
 	struct Set *dest_set = init_dest_set(src_set->num_keys, tmp_path);
 	if (dest_set == NULL) goto rm_path_out;
 
+	if (rm_cycles(src_set, dest_set, options) != 0) goto free_dest_out;
 	rename_paths(src_set, dest_set, options);
 
 	set_destroy(dest_set);
@@ -65,6 +66,9 @@ int main(int argc, char *argv[])
 
 	return EXIT_SUCCESS;
 
+
+free_dest_out:
+	set_destroy(dest_set);
 
 rm_path_out:
 	rm_path(tmp_path);

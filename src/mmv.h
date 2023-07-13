@@ -179,6 +179,8 @@ void rm_path(char *path);
  */
 void set_destroy(struct Set *map);
 
+int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *options);
+
 int is_duplicate_element(
     char *cur_str, struct Set *set, long unsigned int *hash
 );
