@@ -169,7 +169,11 @@ int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
 FILE *__attribute__((malloc)) open_tmpfile_fptr(char *tmp_path)
 {
 	int tmp_fd = mkstemp(tmp_path);
-	if (tmp_fd == -1) return NULL;
+	if (tmp_fd == -1)
+	{
+		perror("mmv: could not create a temporary file");
+		return NULL;
+	}
 
 	return fdopen(tmp_fd, "w");
 }
@@ -368,7 +372,11 @@ int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 			{
 				// create temporary name using the current name
 				int tmp_fd = mkstemp(tmp_path);
-				if (tmp_fd == -1) return -1;
+				if (tmp_fd == -1)
+				{
+					perror("mmv: could not create a temporary file");
+					return -1;
+				}
 
 				// rename to temporary name
 				rename_path(src_set->map[u_key], tmp_path, opts);
