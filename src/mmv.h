@@ -6,100 +6,25 @@
 
 
 #include <errno.h>
-#include <getopt.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
+
+#include "./set.h"
+#include "./utils.h"
+
 
 #define PROG_NAME    "mmv"
 #define PROG_VERSION "version 0.2.0"
 #define PROG_REMOTE  "https://github.com/mcauley-penney/mmv-c"
-#define MAX_OPS      50000
-
-typedef u_int32_t Fnv32_t;
 
 struct Opts
 {
 	bool resolve_paths;
 	bool verbose;
 };
-
-struct Set
-{
-	char **map;
-	unsigned long int map_capacity;
-	unsigned int num_keys;
-	int keys[MAX_OPS + 1];
-};
-
-
-/**
- * @brief Create struct of possible user flags
- * @return Opt struct
- */
-struct Opts *make_opts(void);
-
-/**
- * @brief Print program usage information
- */
-void usage(void);
-
-/**
- * @brief Print program help information
- */
-void try_help(void);
-
-/**
- * @brief Create a set of strings from argv
- *
- * @param argv
- * @param argc
- * @param ***map: pointer to a string array
- * @param **key: pointer to MapKeyArr struct
- */
-struct Set *set_init(
-    bool resolve_paths, const int arg_count, char *args[], bool track_dupes
-);
-
-/**
- * @brief Allocate memory for members of a Set struct
- *
- * @param num_args
- * @param map_size
- */
-struct Set *set_alloc(const unsigned long int map_size);
-
-/**
- * @brief Insert a string into the given Set struct
- *
- * @param cur_str
- * @param map_size
- * @param map
- * @return
- */
-int set_insert(char *cur_str, struct Set *set, bool track_dupes);
-
-/**
- * @brief hashes a string with the Fowler–Noll–Vo 1a 32bit hash fn
- *
- * @param str: string to hash
- * @param map_size: size of map; used to modulo the hash to fit into array
- *
- * @return hash for input string % map_size
- */
-long unsigned int hash_str(char *str, const unsigned long int map_size);
-
-/**
- * @brief move the given source string into the given hash map position
- *
- * @param array_pos: position in hash map to populate
- * @param src_str: str to copy into hash map
- */
-char *cpy_str_to_arr(char **array_pos, const char *src_str);
 
 /**
  * @brief opens temp file at path, writes source strings (old names)
@@ -172,15 +97,5 @@ void rename_path(const char *src, const char *dest, struct Opts *options);
  */
 void rm_path(char *path);
 
-/**
- * @brief completely frees a Map struct
- *
- * @param map: Map struct to free the nodes of
- */
-void set_destroy(struct Set *map);
 
 int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *options);
-
-int is_duplicate_element(
-    char *cur_str, struct Set *set, long unsigned int *hash
-);
