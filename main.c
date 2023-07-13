@@ -46,8 +46,6 @@ int main(int argc, char *argv[])
 
 	char tmp_path[] = "/tmp/mmv_XXXXXX";
 
-	umask(077);
-
 	if (write_strarr_to_tmpfile(src_set, tmp_path) != 0) goto free_src_out;
 
 	if (edit_tmpfile(tmp_path) != 0) goto rm_path_out;
