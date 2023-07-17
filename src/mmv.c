@@ -22,7 +22,7 @@ int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
 	return 0;
 }
 
-FILE *__attribute__((malloc)) open_tmpfile_fptr(char *tmp_path)
+FILE *open_tmpfile_fptr(char *tmp_path)
 {
 	int tmp_fd = mkstemp(tmp_path);
 	if (tmp_fd == -1)

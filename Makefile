@@ -1,4 +1,4 @@
-# Make manual: hhttps://www.gnu.org/software/make/manual/make.html
+# Make manual: https://www.gnu.org/software/make/manual/make.html
 # GCC Options: https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html
 
 # mmv
@@ -14,7 +14,6 @@ bin_dir = $(prefix)/bin
 man_dir = $(prefix)/man/man1
 
 src_dir = src
-inc_dir = inc
 test_dir = test
 debug_dir = debug
 build_dir = build
@@ -31,8 +30,7 @@ w-arith = -Wdouble-promotion -Wfloat-equal
 w-basic = -pedantic -Wall -Wextra
 w-extra = -Wcast-align=strict -Wconversion -Wpadded -Wshadow -Wstrict-prototypes -Wvla
 w-fmt = -Wformat=2 -Wformat-overflow=2 -Wformat-truncation
-w-sgst = -Wsuggest-attribute=const -Wsuggest-attribute=malloc -Wsuggest-attribute=noreturn
-warn = $(w-basic) $(w-extra) $(w-arith) $(w-fmt) $(w-sgst)
+warn = $(w-basic) $(w-extra) $(w-arith) $(w-fmt)
 
 CFLAGS = $(warn) $(optim)
 
@@ -69,6 +67,7 @@ test_clean:
 debug_clean:
 	rm -rf $(build_dir)
 	rm debug_$(bin_name)
+
 
 # install target for "sudo make install"
 install:

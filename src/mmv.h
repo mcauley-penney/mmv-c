@@ -45,7 +45,7 @@ int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[]);
  *
  * @return file pointer to opened path
  */
-FILE *__attribute__((malloc)) open_tmpfile_fptr(char *tmp_path);
+FILE *open_tmpfile_fptr(char *tmp_path);
 
 /**
  * @brief gets the user's $EDITOR env variable and opens temp file with it
