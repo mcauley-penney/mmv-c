@@ -43,3 +43,13 @@ void set_destroy(struct Set *map);
 int is_duplicate_element(
     char *cur_str, struct Set *set, long unsigned int *hash
 );
+
+int *set_begin(struct Set *map);
+
+int *set_next(int *iter);
+
+int *set_end(struct Set *map);
+
+char *get_set_str_at_iter(const struct Set *map, const int *iter);
+
+int is_invalid_key(const int *iter);

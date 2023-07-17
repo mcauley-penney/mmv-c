@@ -162,3 +162,28 @@ void set_destroy(struct Set *map)
 	free(map->map);
 	free(map);
 }
+
+int *set_begin(struct Set *map)
+{
+	return &map->keys[0];
+}
+
+int *set_next(int *iter)
+{
+	return ++iter;
+}
+
+int *set_end(struct Set *map)
+{
+	return &map->keys[map->num_keys];
+}
+
+char *get_set_str_at_iter(const struct Set *map, const int *iter)
+{
+	return map->map[*iter];
+}
+
+int is_invalid_key(const int *iter)
+{
+	return *iter == -1;
+}

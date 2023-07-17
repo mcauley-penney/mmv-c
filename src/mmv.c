@@ -2,7 +2,7 @@
 
 int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
 {
-	size_t i;
+	int *i;
 
 	FILE *tmp_fptr = open_tmpfile_fptr(tmp_path_template);
 	if (tmp_fptr == NULL)
@@ -14,8 +14,8 @@ int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
 		return errno;
 	}
 
-	for (i = 0; i < map->num_keys; i++)
-		fprintf(tmp_fptr, "%s\n", map->map[map->keys[i]]);
+	for (i = set_begin(map); i < set_end(map); i = set_next(i))
+		fprintf(tmp_fptr, "%s\n", get_set_str_at_iter(map, i));
 
 	fclose(tmp_fptr);
 
@@ -146,18 +146,19 @@ void free_strarr(char **arr, int arr_size)
 
 int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 {
-	size_t i;
-	int src_key, dest_key;
-	char *src_str;
+	int *i, *j;
+	char *src_str, *dest_str;
 
-	for (i = 0; i < src_set->num_keys; i++)
+
+	for (i = set_begin(src_set), j = set_begin(dest_set);
+	     i < set_end(src_set) && j < set_end(dest_set);
+	     i = set_next(i), j = set_next(j))
 	{
-		dest_key = dest_set->keys[i];
-		src_key  = src_set->keys[i];
-		src_str  = src_set->map[src_key];
+		src_str  = get_set_str_at_iter(src_set, i);
+		dest_str = get_set_str_at_iter(dest_set, j);
 
-		if (dest_key != -1)
-			rename_path(src_str, dest_set->map[dest_key], opts);
+		if (!is_invalid_key(j))
+			rename_path(src_str, dest_str, opts);
 
 		else
 			fprintf(
@@ -194,22 +195,21 @@ void rm_path(char *path)
 
 int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 {
-	size_t i;
-	int cur_src_key, cur_dest_key, is_dupe;
+	int *i, *j, is_dupe;
 	unsigned long int u_key;
-	char *cur_src_str, *cur_dest_str;
+	char *src_str, *dest_str;
 
-	for (i = 0; i < dest_set->num_keys; i++)
+	for (i = set_begin(src_set), j = set_begin(dest_set);
+	     i < set_end(src_set) && j < set_end(dest_set);
+	     i = set_next(i), j = set_next(j))
 	{
-		cur_src_key  = src_set->keys[i];
-		cur_dest_key = dest_set->keys[i];
-		cur_src_str  = src_set->map[cur_src_key];
-		cur_dest_str = dest_set->map[cur_dest_key];
+		src_str  = get_set_str_at_iter(src_set, i);
+		dest_str = get_set_str_at_iter(dest_set, j);
 
-		if (cur_dest_key != -1 && strcmp(cur_src_str, cur_dest_str) != 0)
+		if (!is_invalid_key(j) && strcmp(src_str, dest_str) != 0)
 		{
-			u_key   = (unsigned int)cur_dest_key;
-			is_dupe = is_duplicate_element(cur_dest_str, src_set, &u_key);
+			u_key           = (unsigned int)*j;
+			is_dupe         = is_duplicate_element(dest_str, src_set, &u_key);
 			char tmp_path[] = "mmv_cycle_XXXXXX";
 
 			if (is_dupe == 0)
