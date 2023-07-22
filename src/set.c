@@ -11,7 +11,8 @@ static struct Set *set_alloc(const unsigned long int map_capacity)
 	unsigned int i;
 
 	struct Set *set = malloc(sizeof(struct Set));
-	if (set == NULL) return NULL;
+	if (set == NULL)
+		return NULL;
 
 	set->map = malloc(sizeof(char *) * map_capacity);
 	if (set->map == NULL)
@@ -77,7 +78,8 @@ static int set_insert(char *cur_str, struct Set *set, bool track_dupes)
 		return 0;
 	}
 
-	if (cpy_str_to_arr(&set->map[hash], cur_str) == NULL) return -1;
+	if (cpy_str_to_arr(&set->map[hash], cur_str) == NULL)
+		return -1;
 
 	set->keys[set->num_keys] = (int)hash;
 	set->num_keys++;
@@ -131,7 +133,8 @@ struct Set *set_init(
 	for (i = 0; i < u_arg_count; i++)
 	{
 		cur_str = args[i];
-		if (resolve_paths) cur_str = realpath(cur_str, NULL);
+		if (resolve_paths)
+			cur_str = realpath(cur_str, NULL);
 
 		if (set_insert(cur_str, set, track_dupes) == -1)
 		{
@@ -156,7 +159,8 @@ void set_destroy(struct Set *map)
 	{
 		key = map->keys[i];
 
-		if (key != -1) free(map->map[key]);
+		if (key != -1)
+			free(set->map[key]);
 	}
 
 	free(map->map);
