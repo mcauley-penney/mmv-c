@@ -27,9 +27,6 @@ cd ..
 sudo rm -r mmv-c
 ```
 
-## differences with itchyny/mmv
-This project doesn't seek to completely duplicate the functionality of the original. It is a work-in-progress and may, in the future, incorporate functionality from the original or new abilities that I might find useful.
-
 
 ## credit
 [itchyny/mmv](https://github.com/itchyny/mmv)
