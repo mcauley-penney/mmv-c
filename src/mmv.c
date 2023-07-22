@@ -154,8 +154,8 @@ int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 	     i < set_end(src_set) && j < set_end(dest_set);
 	     i = set_next(i), j = set_next(j))
 	{
-		src_str  = get_set_str_at_iter(src_set, i);
-		dest_str = get_set_str_at_iter(dest_set, j);
+		src_str  = *get_set_pos(src_set, i);
+		dest_str = *get_set_pos(dest_set, j);
 
 		if (!is_invalid_key(j))
 			rename_path(src_str, dest_str, opts);
@@ -198,13 +198,14 @@ int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 	int *i, *j, is_dupe;
 	unsigned long int u_key;
 	char *src_str, *dest_str;
+	char **cur_src_pos;
 
 	for (i = set_begin(src_set), j = set_begin(dest_set);
 	     i < set_end(src_set) && j < set_end(dest_set);
 	     i = set_next(i), j = set_next(j))
 	{
-		src_str  = get_set_str_at_iter(src_set, i);
-		dest_str = get_set_str_at_iter(dest_set, j);
+		src_str  = *get_set_pos(src_set, i);
+		dest_str = *get_set_pos(dest_set, j);
 
 		if (!is_invalid_key(j) && strcmp(src_str, dest_str) != 0)
 		{
@@ -222,12 +223,14 @@ int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 					return -1;
 				}
 
+				cur_src_pos = get_set_pos(src_set, j);
+
 				// rename to temporary name
-				rename_path(src_set->map[u_key], tmp_path, opts);
+				rename_path(*cur_src_pos, tmp_path, opts);
 
 				// update str in src map to temp_str
-				free(src_set->map[u_key]);
-				cpy_str_to_arr(&src_set->map[u_key], tmp_path);
+				free(*cur_src_pos);
+				cpy_str_to_arr(cur_src_pos, tmp_path);
 			}
 		}
 	}

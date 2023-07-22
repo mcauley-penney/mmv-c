@@ -50,6 +50,6 @@ int *set_next(int *iter);
 
 int *set_end(struct Set *map);
 
-char *get_set_str_at_iter(const struct Set *map, const int *iter);
+char **get_set_pos(const struct Set *map, const int *iter);
 
 int is_invalid_key(const int *iter);

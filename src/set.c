@@ -182,9 +182,9 @@ int *set_end(struct Set *map)
 	return &map->keys[map->num_keys];
 }
 
-char *get_set_str_at_iter(const struct Set *map, const int *iter)
+char **get_set_pos(const struct Set *set, const int *iter)
 {
-	return map->map[*iter];
+	return &(set->map[*iter]);
 }
 
 int is_invalid_key(const int *iter)
