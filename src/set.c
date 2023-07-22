@@ -109,9 +109,14 @@ struct Set *set_init(
     bool resolve_paths, const int arg_count, char *args[], bool track_dupes
 )
 {
-	if (arg_count == 0)
+	if (arg_count > MAX_OPS)
 	{
-		fputs("mmv: missing file operand(s)", stderr);
+		fprintf(stderr, "mmv: too many operands, use up to %u\n", MAX_OPS);
+		return NULL;
+	}
+	else if (arg_count == 0)
+	{
+		fputs("mmv: missing file operand(s)\n", stderr);
 		return NULL;
 	}
 

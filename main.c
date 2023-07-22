@@ -76,12 +76,6 @@ int main(int argc, char *argv[])
 	argv += optind;
 	argc -= optind;
 
-	if (argc > MAX_OPS)
-	{
-		fprintf(stderr, "mmv: too many operands, use up to %u\n", MAX_OPS);
-		goto free_opts_out;
-	}
-
 	struct Set *src_set = set_init(options->resolve_paths, argc, argv, false);
 	if (src_set == NULL)
 		goto free_opts_out;
