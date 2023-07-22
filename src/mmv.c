@@ -1,167 +1,10 @@
-#include "mmv.h"
+#include "./mmv.h"
 
-struct Opts *make_opts(void)
+int write_strarr_to_tmpfile(struct Set *set, char tmp_path_template[])
 {
-	struct Opts *opts = malloc(sizeof(struct Opts));
-	if (opts == NULL)
-	{
-		perror("mmv: failed to allocate memory for user flags\n");
-		return NULL;
-	}
+	int *i;
 
-	opts->verbose = false;
-
-	return opts;
-}
-
-void usage(void)
-{
-	printf("Usage: %s [OPTION] SOURCES\n\n", PROG_NAME);
-	puts("Rename or move SOURCE(s) by editing them in $EDITOR.");
-	printf("For full documentation, see man %s\n", PROG_NAME);
-}
-
-void try_help(void)
-{
-	puts("Try 'mmv -h'for more information");
-}
-
-struct Set *make_str_set(
-    bool resolve_paths, const int arg_count, char *args[], bool track_dupes
-)
-{
-	if (arg_count == 0)
-	{
-		fprintf(stderr, "mmv: missing file operand\n");
-		return NULL;
-	}
-
-	unsigned int i;
-	const unsigned int u_arg_count = (unsigned int)arg_count;
-
-	// (6 * (val - 1)) + 1 is a formula that creates a
-	// prime number using some value as a base. We are
-	// using this to create a prime hash map size to
-	// attempt to mitigate collisions. While the FNV
-	// hash is known to be of high quality and this is
-	// supposed to not be necessary, this is not heavy
-	// to implement and adds a layer of protection.
-	const unsigned int map_capacity = (6 * (u_arg_count - 1)) + 1;
-
-	struct Set *set = alloc_str_set(u_arg_count, map_capacity);
-	if (set == NULL)
-	{
-		perror("mmv: failed to allocate memory to initialize hashmap");
-		return NULL;
-	}
-
-	char *cur_str;
-
-	for (i = 0; i < u_arg_count; i++)
-	{
-		cur_str = args[i];
-		if (resolve_paths) cur_str = realpath(cur_str, NULL);
-
-		if (str_set_insert(cur_str, map_capacity, set, track_dupes) == -1)
-		{
-			free_str_set(set);
-			return NULL;
-		}
-	}
-
-	return set;
-}
-
-struct Set *alloc_str_set(
-    const unsigned int num_names, const unsigned int map_size
-)
-{
-	unsigned int i;
-
-	struct Set *set = malloc(sizeof(struct Set) + num_names * sizeof(int));
-	if (set == NULL) return NULL;
-
-	set->map = malloc(sizeof(char *) * map_size);
-	if (set->map == NULL)
-	{
-		free(set);
-		return NULL;
-	}
-
-	set->num_keys = 0;
-
-	for (i = 0; i < map_size; i++)
-		set->map[i] = NULL;
-
-	return set;
-}
-
-int str_set_insert(
-    char *cur_str, const unsigned int map_space, struct Set *set,
-    bool track_dupes
-)
-{
-	int dupe_found    = -1;
-	unsigned int hash = hash_str(cur_str, map_space);
-
-	while (set->map[hash] != NULL && dupe_found != 0)
-	{
-		// strcmp returns 0 if strings are identical
-		dupe_found = strcmp(set->map[hash], cur_str);
-
-		hash = (hash + 1 < map_space) ? hash + 1 : 0;
-	}
-	if (dupe_found == 0)
-	{
-		if (track_dupes)
-		{
-			set->keys[set->num_keys] = -1;
-			set->num_keys++;
-		}
-
-		return 0;
-	}
-
-	if (cpy_str_to_arr(&set->map[hash], cur_str) == NULL) return -1;
-
-	set->keys[set->num_keys] = (int)hash;
-	set->num_keys++;
-
-	return 1;
-}
-
-unsigned int hash_str(char *str, const unsigned int set_capacity)
-{
-	unsigned char *s = (unsigned char *)str;
-	Fnv32_t hval     = ((Fnv32_t)0x811c9dc5);
-
-	while (*s)
-	{
-		hval ^= (Fnv32_t)*s++;
-		hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) +
-		        (hval << 24);
-	}
-
-	return hval % set_capacity;
-}
-
-char *cpy_str_to_arr(char **arr_dest, const char *src_str)
-{
-	*arr_dest = malloc((strlen(src_str) + 1) * sizeof(char));
-	if (arr_dest == NULL)
-	{
-		perror("mmv: failed to allocate memory for new map node source str\n");
-		return NULL;
-	}
-
-	return strcpy(*arr_dest, src_str);
-}
-
-int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
-{
-	size_t i;
-
-	FILE *tmp_fptr = open_tmp_path_fptr(tmp_path_template);
+	FILE *tmp_fptr = open_tmpfile_fptr(tmp_path_template);
 	if (tmp_fptr == NULL)
 	{
 		fprintf(
@@ -171,27 +14,32 @@ int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
 		return errno;
 	}
 
-	for (i = 0; i < map->num_keys; i++)
-		fprintf(tmp_fptr, "%s\n", map->map[map->keys[i]]);
+	for (i = set_begin(set); i < set_end(set); i = set_next(i))
+		fprintf(tmp_fptr, "%s\n", *get_set_pos(set, i));
 
 	fclose(tmp_fptr);
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-FILE *__attribute__((malloc)) open_tmp_path_fptr(char *tmp_path)
+FILE *open_tmpfile_fptr(char *tmp_path)
 {
 	int tmp_fd = mkstemp(tmp_path);
-	if (tmp_fd == -1) return NULL;
+	if (tmp_fd == -1)
+	{
+		perror("mmv: could not create a temporary file");
+		return NULL;
+	}
 
 	return fdopen(tmp_fd, "w");
 }
 
-int open_file_in_editor(const char *path)
+int edit_tmpfile(const char *path)
 {
 	int ret;
 	char *editor_name = getenv("EDITOR");
-	if (editor_name == NULL) editor_name = "nano";
+	if (editor_name == NULL)
+		editor_name = "nano";
 
 	// provide space for "$EDITOR <path>\0", e.g. "nano test.txt\0"
 	const size_t cmd_len = strlen(editor_name) + strlen(path) + 2;
@@ -225,33 +73,34 @@ int open_file_in_editor(const char *path)
 
 	free(edit_cmd);
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-struct Set *make_dest_str_set(struct Set *src_set, char path[])
+struct Set *init_dest_set(unsigned int num_keys, char path[])
 {
 	// size of destination array only needs to be, at
 	// maximum, the number of keys in the source set
-	char **dest_arr = malloc(sizeof(char *) * src_set->num_keys);
-	if (dest_arr == NULL) return NULL;
+	char **dest_arr = malloc(sizeof(char *) * num_keys);
+	if (dest_arr == NULL)
+		return NULL;
 
 	int dest_size = 0;
 
-	if (read_tmp_file_strs(dest_arr, &dest_size, src_set, path) != 0)
+	if (read_tmpfile_strs(dest_arr, &dest_size, num_keys, path) != 0)
 	{
-		free_str_arr(dest_arr, dest_size);
+		free_strarr(dest_arr, dest_size);
 		return NULL;
 	}
 
-	struct Set *set = make_str_set(false, dest_size, dest_arr, true);
+	struct Set *set = set_init(false, dest_size, dest_arr, true);
 
-	free_str_arr(dest_arr, dest_size);
+	free_strarr(dest_arr, dest_size);
 
 	return set;
 }
 
-int read_tmp_file_strs(
-    char **dest_arr, int *dest_size, struct Set *set, char path[]
+int read_tmpfile_strs(
+    char **dest_arr, int *dest_size, unsigned int num_keys, char path[]
 )
 {
 	char cur_str[PATH_MAX], *read_ptr = "";
@@ -267,7 +116,7 @@ int read_tmp_file_strs(
 		return errno;
 	}
 
-	while (read_ptr != NULL && i < set->num_keys)
+	while (read_ptr != NULL && i < num_keys)
 	{
 		read_ptr = fgets(cur_str, PATH_MAX, tmp_fptr);
 
@@ -284,10 +133,10 @@ int read_tmp_file_strs(
 
 	fclose(tmp_fptr);
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-void free_str_arr(char **arr, int arr_size)
+void free_strarr(char **arr, int arr_size)
 {
 	for (int i = 0; i < arr_size; i++)
 		free(arr[i]);
@@ -295,42 +144,45 @@ void free_str_arr(char **arr, int arr_size)
 	free(arr);
 }
 
-int rename_filesystem_items(
-    struct Set *src_set, struct Set *dest_set, struct Opts *options
-)
+int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 {
-	size_t i;
-	int src_key, dest_key;
-	char *src_str;
+	int *i, *j;
+	char *src_str, *dest_str;
 
-	for (i = 0; i < src_set->num_keys; i++)
+
+	for (i = set_begin(src_set), j = set_begin(dest_set);
+	     i < set_end(src_set) && j < set_end(dest_set);
+	     i = set_next(i), j = set_next(j))
 	{
-		dest_key = dest_set->keys[i];
-		src_key  = src_set->keys[i];
-		src_str  = src_set->map[src_key];
+		src_str  = *get_set_pos(src_set, i);
+		dest_str = *get_set_pos(dest_set, j);
 
-		if (dest_key != -1)
-			rename_path(src_str, dest_set->map[dest_key], options);
+		if (!is_invalid_key(j))
+			rename_path(src_str, dest_str, opts);
 
 		else
-			printf(
+			fprintf(
+			    stderr,
 			    "mmv: duplicate dest found for src '%s'. No mv conducted.\n",
 			    src_str
 			);
 	}
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-void rename_path(const char *src, const char *dest, struct Opts *options)
+void rename_path(const char *src, const char *dest, struct Opts *opts)
 {
+	if (strcmp(src, dest) == 0)
+		return;
+
 	if (rename(src, dest) == -1)
 		fprintf(
 		    stderr, "mmv: \'%s\' to \'%s\': %s\n", src, dest, strerror(errno)
 		);
 
-	else if (options->verbose)
-		printf("renamed '%s' -> '%s'\n", src, dest);
+	else if (opts->verbose)
+		printf("  '%s' -> '%s'\n", src, dest);
 }
 
 void rm_path(char *path)
@@ -341,18 +193,47 @@ void rm_path(char *path)
 		);
 }
 
-void free_str_set(struct Set *map)
+int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 {
-	size_t i;
-	int key;
+	int *i, *j, is_dupe;
+	unsigned long int u_key;
+	char *src_str, *dest_str;
+	char **cur_src_pos;
 
-	for (i = 0; i < map->num_keys; i++)
+	for (i = set_begin(src_set), j = set_begin(dest_set);
+	     i < set_end(src_set) && j < set_end(dest_set);
+	     i = set_next(i), j = set_next(j))
 	{
-		key = map->keys[i];
+		src_str  = *get_set_pos(src_set, i);
+		dest_str = *get_set_pos(dest_set, j);
 
-		if (key != -1) free(map->map[key]);
+		if (!is_invalid_key(j) && strcmp(src_str, dest_str) != 0)
+		{
+			u_key           = (unsigned int)*j;
+			is_dupe         = is_duplicate_element(dest_str, src_set, &u_key);
+			char tmp_path[] = "mmv_cycle_XXXXXX";
+
+			if (is_dupe == 0)
+			{
+				// create temporary name using the current name
+				int tmp_fd = mkstemp(tmp_path);
+				if (tmp_fd == -1)
+				{
+					perror("mmv: could not create a temporary file");
+					return -1;
+				}
+
+				cur_src_pos = get_set_pos(src_set, j);
+
+				// rename to temporary name
+				rename_path(*cur_src_pos, tmp_path, opts);
+
+				// update str in src map to temp_str
+				free(*cur_src_pos);
+				cpy_str_to_arr(cur_src_pos, tmp_path);
+			}
+		}
 	}
 
-	free(map->map);
-	free(map);
+	return 0;
 }

@@ -12,7 +12,7 @@ AllowAllParametersOfDeclarationOnNextLine: 'true'
 AllowShortBlocksOnASingleLine: 'false'
 AllowShortCaseLabelsOnASingleLine: 'true'
 AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: 'false'
 BasedOnStyle: Microsoft
 BreakBeforeBraces: Allman
@@ -21,7 +21,7 @@ IndentCaseLabels: 'true'
 IndentPPDirectives: BeforeHash
 KeepEmptyLinesAtTheStartOfBlocks: 'false'
 MaxEmptyLinesToKeep: '2'
-SeparateDefinitionBlocks : Always
+SeparateDefinitionBlocks: Always
 TabWidth: '4'
 UseTab: ForIndentation
 

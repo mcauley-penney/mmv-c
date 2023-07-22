@@ -1,4 +1,4 @@
-# Make manual: hhttps://www.gnu.org/software/make/manual/make.html
+# Make manual: https://www.gnu.org/software/make/manual/make.html
 # GCC Options: https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html
 
 # mmv
@@ -14,27 +14,26 @@ bin_dir = $(prefix)/bin
 man_dir = $(prefix)/man/man1
 
 src_dir = src
-inc_dir = inc
 test_dir = test
 debug_dir = debug
 build_dir = build
 
-src_files := $(wildcard $(src_dir)/*)
-test_src_files := $(wildcard $(test_dir)/*)
+src_files		:= $(wildcard $(src_dir)/*)
+def_files 		:= $(wildcard $(src_dir)/*.c)
+test_def_files  := $(patsubst $(src_dir)/%.c, $(test_dir)/test_%.c, $(def_files))
 
 
 # -------------------------------------------------------------------
 # flags
 # -------------------------------------------------------------------
-optim = -O2
+optim_flags = -O2
 w-arith = -Wdouble-promotion -Wfloat-equal
 w-basic = -pedantic -Wall -Wextra
 w-extra = -Wcast-align=strict -Wconversion -Wpadded -Wshadow -Wstrict-prototypes -Wvla
 w-fmt = -Wformat=2 -Wformat-overflow=2 -Wformat-truncation
-w-sgst = -Wsuggest-attribute=const -Wsuggest-attribute=malloc -Wsuggest-attribute=noreturn
-warn = $(w-basic) $(w-extra) $(w-arith) $(w-fmt) $(w-sgst)
+warn_flags = $(w-basic) $(w-extra) $(w-arith) $(w-fmt)
 
-CFLAGS = $(warn) $(optim)
+CFLAGS = $(warn_flags) $(optim_flags)
 
 
 # -------------------------------------------------------------------
@@ -48,7 +47,15 @@ all:
 
 
 test:
-	$(CC) $(CFLAGS) $(test_src_files) $(src_files) -o test_$(bin_name)
+	mkdir -p ./test/bin
+
+	$(CC) ./test/test_utils.c ./test/unity.c -o ./test/bin/test_utils
+	$(CC) ./test/test_set.c  ./test/unity.c -o ./test/bin/test_set
+	$(CC) ./test/test_mmv.c  ./test/unity.c -o ./test/bin/test_mmv
+
+	./test/bin/test_utils
+	./test/bin/test_set
+	./test/bin/test_mmv
 
 
 debug:
@@ -57,18 +64,16 @@ debug:
 
 # clean target: remove all object files and binary
 clean:
-	rm -rf $(build_dir)
 	rm $(bin_name)
 
 
 test_clean:
-	rm -rf $(build_dir)
-	rm test_$(bin_name)
+	rm -rf ./test/bin
 
 
 debug_clean:
-	rm -rf $(build_dir)
 	rm debug_$(bin_name)
+
 
 # install target for "sudo make install"
 install:

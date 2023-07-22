@@ -3,13 +3,15 @@
 
 Edit file and directory names in `$EDITOR`. Inspired by [itchyny/mmv](https://github.com/itchyny/mmv).
 
-![mmv_intro](https://user-images.githubusercontent.com/59481467/168495786-2d7900e7-50ff-4ca4-aa86-67bf9da24199.gif)
-
 
 ## usage
-Like other command line tools, `mmv` accepts wildcards and special paths, such as `..`
+- `mmv` will open the arguments you pass it, files or directories, in a temporary buffer where you can give new names
+  
+![mmv-basic](https://github.com/mcauley-penney/mmv-c/assets/59481467/23b24fe1-e62e-48ea-9676-906cc1bbd745)
 
-![mmv_example](https://user-images.githubusercontent.com/59481467/168495798-8102f258-98a0-4ce2-b98d-2640ff6afa9c.gif)
+- It will also handle cyclical renames, should the desire arise
+
+![mmv-cycle](https://github.com/mcauley-penney/mmv-c/assets/59481467/010fef24-fbb2-4e73-9e73-ab7fb62216a9)
 
 
 ## installation
@@ -26,9 +28,6 @@ sudo make install
 cd ..
 sudo rm -r mmv-c
 ```
-
-## differences with itchyny/mmv
-This project doesn't seek to completely duplicate the functionality of the original. It is a work-in-progress and may, in the future, incorporate functionality from the original or new abilities that I might find useful.
 
 
 ## credit
