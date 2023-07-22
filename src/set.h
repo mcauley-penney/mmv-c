@@ -37,19 +37,19 @@ struct Set *set_init(
  *
  * @param map: Map struct to free the nodes of
  */
-void set_destroy(struct Set *map);
+void set_destroy(struct Set *set);
 
 /* TODO: */
 int is_duplicate_element(
     char *cur_str, struct Set *set, long unsigned int *hash
 );
 
-int *set_begin(struct Set *map);
+int *set_begin(struct Set *set);
 
 int *set_next(int *iter);
 
-int *set_end(struct Set *map);
+int *set_end(struct Set *set);
 
-char **get_set_pos(const struct Set *map, const int *iter);
+char **get_set_pos(const struct Set *set, const int *iter);
 
 int is_invalid_key(const int *iter);

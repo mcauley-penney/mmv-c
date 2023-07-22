@@ -155,26 +155,26 @@ struct Set *set_init(
 	return set;
 }
 
-void set_destroy(struct Set *map)
+void set_destroy(struct Set *set)
 {
-	size_t i;
+	unsigned int i;
 	int key;
 
-	for (i = 0; i < map->num_keys; i++)
+	for (i = 0; i < set->num_keys; i++)
 	{
-		key = map->keys[i];
+		key = set->keys[i];
 
 		if (key != -1)
 			free(set->map[key]);
 	}
 
-	free(map->map);
-	free(map);
+	free(set->map);
+	free(set);
 }
 
-int *set_begin(struct Set *map)
+int *set_begin(struct Set *set)
 {
-	return &map->keys[0];
+	return &set->keys[0];
 }
 
 int *set_next(int *iter)
@@ -182,9 +182,9 @@ int *set_next(int *iter)
 	return ++iter;
 }
 
-int *set_end(struct Set *map)
+int *set_end(struct Set *set)
 {
-	return &map->keys[map->num_keys];
+	return &set->keys[set->num_keys];
 }
 
 char **get_set_pos(const struct Set *set, const int *iter)

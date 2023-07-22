@@ -1,6 +1,6 @@
 #include "./mmv.h"
 
-int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
+int write_strarr_to_tmpfile(struct Set *set, char tmp_path_template[])
 {
 	int *i;
 
@@ -14,8 +14,8 @@ int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[])
 		return errno;
 	}
 
-	for (i = set_begin(map); i < set_end(map); i = set_next(i))
-		fprintf(tmp_fptr, "%s\n", get_set_str_at_iter(map, i));
+	for (i = set_begin(set); i < set_end(set); i = set_next(i))
+		fprintf(tmp_fptr, "%s\n", *get_set_pos(set, i));
 
 	fclose(tmp_fptr);
 

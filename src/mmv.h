@@ -35,7 +35,7 @@ struct Opts
  * @param keys: struct containing list of keys to node locations in
  *      hashmap
  */
-int write_strarr_to_tmpfile(struct Set *map, char tmp_path_template[]);
+int write_strarr_to_tmpfile(struct Set *set, char tmp_path_template[]);
 
 
 /**
