@@ -26,6 +26,8 @@ static struct Set *set_alloc(const unsigned long int map_capacity)
 	for (i = 0; i < map_capacity; i++)
 		set->map[i] = NULL;
 
+	set->map_capacity = map_capacity;
+
 	return set;
 }
 
@@ -130,8 +132,6 @@ struct Set *set_init(
 		perror("mmv: failed to allocate memory to initialize string set");
 		return NULL;
 	}
-
-	set->map_capacity = map_capacity;
 
 	char *cur_str;
 
