@@ -51,7 +51,7 @@ test:
 
 	$(CC) ./test/test_utils.c ./test/unity.c -o ./test/bin/test_utils
 	$(CC) ./test/test_set.c  ./test/unity.c -o ./test/bin/test_set
-	$(CC) ./test/test_mmv.c  ./test/unity.c -o ./test/bin/test_mmv
+	$(CC) -D DEBUG=1 ./test/test_mmv.c  ./test/unity.c -o ./test/bin/test_mmv
 
 	./test/bin/test_utils
 	./test/bin/test_set
