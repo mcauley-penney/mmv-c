@@ -1,3 +1,7 @@
+#ifndef SET_H
+#define SET_H
+
+
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -53,3 +57,6 @@ int *set_end(struct Set *set);
 char **get_set_pos(const struct Set *set, const int *iter);
 
 int is_invalid_key(const int *iter);
+
+
+#endif // SET_H

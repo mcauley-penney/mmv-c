@@ -1,3 +1,7 @@
+#ifndef UTILS_H
+#define UTILS_H
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,3 +13,6 @@
  * @param src_str: str to copy into hash map
  */
 char *cpy_str_to_arr(char **array_pos, const char *src_str);
+
+
+#endif // UTILS_H
