@@ -21,7 +21,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Clone mmv
+        uses: actions/checkout@v3
+
+      - name: Clone test framework
+        uses: actions/checkout@v3
+        with:
+          repository: ThrowTheSwitch/Unity
+          path: Unity
+
+      - name: Set up directory
+        run: mv ./Unity/src/* test
 
       - name: Build test executables
         run: make test
