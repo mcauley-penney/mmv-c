@@ -158,6 +158,7 @@ void test_rm_cycles()
 	src_str = *get_set_pos(src_set, i);
 	TEST_ASSERT(strcmp(src_argv[1], src_str) != 0);
 
+	rm_path(src_str);
 	free(options);
 	set_destroy(src_set);
 	set_destroy(dest_set);
