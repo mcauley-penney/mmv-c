@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 	if (dest_set == NULL)
 		goto rm_path_out;
 
-	if (rm_cycles(src_set, dest_set, options) != 0)
+	if (argc > 1 && rm_cycles(src_set, dest_set, options) != 0)
 		goto free_dest_out;
 
 	rename_paths(src_set, dest_set, options);
