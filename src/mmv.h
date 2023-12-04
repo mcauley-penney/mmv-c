@@ -22,8 +22,8 @@
 
 struct Opts
 {
-	bool resolve_paths;
-	bool verbose;
+    bool resolve_paths;
+    bool verbose;
 };
 
 /**
@@ -70,16 +70,12 @@ struct Set *init_dest_set(unsigned int num_keys, char path[]);
  * @param path: path to temp file containing new names
  * @return errno or 0 for success
  */
-int read_tmpfile_strs(
-    char **dest_arr, int *dest_size, unsigned int num_keys, char path[]
-);
+int read_tmpfile_strs(char **dest_arr, int *dest_size, unsigned int num_keys, char path[]);
 
 
 void free_strarr(char **arr, int arr_size);
 
-int rename_paths(
-    struct Set *src_set, struct Set *dest_set, struct Opts *options
-);
+int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *options);
 
 /**
  * @brief renames an item in file system

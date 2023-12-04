@@ -17,10 +17,10 @@ typedef u_int32_t Fnv32_t;
 
 struct Set
 {
-	char **map;
-	unsigned long int map_capacity;
-	unsigned int num_keys;
-	int keys[MAX_OPS + 1];
+    char **map;
+    unsigned long int map_capacity;
+    unsigned int num_keys;
+    int keys[MAX_OPS + 1];
 };
 
 
@@ -32,9 +32,7 @@ struct Set
  * @param ***map: pointer to a string array
  * @param **key: pointer to MapKeyArr struct
  */
-struct Set *set_init(
-    bool resolve_paths, const int arg_count, char *args[], bool track_dupes
-);
+struct Set *set_init(bool resolve_paths, const int arg_count, char *args[], bool track_dupes);
 
 /**
  * @brief completely frees a Map struct
@@ -44,9 +42,7 @@ struct Set *set_init(
 void set_destroy(struct Set *set);
 
 /* TODO: */
-int is_duplicate_element(
-    char *cur_str, struct Set *set, long unsigned int *hash
-);
+int is_duplicate_element(char *cur_str, struct Set *set, long unsigned int *hash);
 
 int *set_begin(struct Set *set);
 
