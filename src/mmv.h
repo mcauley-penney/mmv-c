@@ -52,7 +52,7 @@ FILE *open_tmpfile_fptr(char *tmp_path);
  *
  * @param path: file path to open in editor
  */
-int edit_tmpfile(const char *path);
+int edit_tmpfile(char *path);
 
 struct Set *init_dest_set(unsigned int num_keys, char path[]);
 

@@ -2,7 +2,7 @@
 
 int write_strarr_to_tmpfile(struct Set *set, char tmp_path_template[])
 {
-    int *i;
+    int *i, *set_end_pos = set_end(set);
 
     FILE *tmp_fptr = open_tmpfile_fptr(tmp_path_template);
     if (tmp_fptr == NULL)
@@ -11,7 +11,7 @@ int write_strarr_to_tmpfile(struct Set *set, char tmp_path_template[])
         return errno;
     }
 
-    for (i = set_begin(set); i < set_end(set); i = set_next(i))
+    for (i = set_begin(set); i < set_end_pos; i = set_next(i))
         fprintf(tmp_fptr, "%s\n", *get_set_pos(set, i));
 
     fclose(tmp_fptr);
@@ -31,35 +31,24 @@ FILE *open_tmpfile_fptr(char *tmp_path)
     return fdopen(tmp_fd, "w");
 }
 
-int edit_tmpfile(const char *path)
+int edit_tmpfile(char *path)
 {
-    int ret;
     char *editor_name = getenv("EDITOR");
     if (editor_name == NULL)
         editor_name = "nano";
 
-    // provide space for "$EDITOR <path>\0", e.g. "nano test.txt\0"
-    const size_t cmd_len = strlen(editor_name) + strlen(path) + 2;
-
-    char *edit_cmd = malloc(sizeof(edit_cmd) * cmd_len);
+    char *cmd_parts[3] = {editor_name, " ", path};
+    char *edit_cmd     = strccat(cmd_parts, 3);
     if (edit_cmd == NULL)
     {
         perror("mmv: failed to allocate memory for $EDITOR command string");
         return errno;
     }
 
-    ret = snprintf(edit_cmd, cmd_len, "%s %s", editor_name, path);
-    if (ret < 0 || ret > (int)cmd_len)
-    {
-        perror("mmv: couldn't create $EDITOR command string");
-        free(edit_cmd);
-        return errno;
-    }
-
 #if DEBUG == 0
     if (system(edit_cmd) != 0)
     {
-        fprintf(stderr, "mmv: \'%s\' returned non-zero exit status: %d\n", editor_name, ret);
+        fprintf(stderr, "mmv: \'%s\' returned non-zero exit status\n", editor_name);
         free(edit_cmd);
         return errno;
     }
@@ -138,7 +127,6 @@ int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
     int *i, *j;
     char *src_str, *dest_str;
 
-
     for (i = set_begin(src_set), j = set_begin(dest_set); i < set_end(src_set) && j < set_end(dest_set);
          i = set_next(i), j = set_next(j))
     {
@@ -173,14 +161,14 @@ void rm_path(char *path)
         fprintf(stderr, "mmv: failed to delete \'%s\': %s\n", path, strerror(errno));
 }
 
+// TODO: modularize
 int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 {
-    int *i, *j, is_dupe;
+    int is_dupe, *i, *j, *src_end_pos = set_end(src_set), *dest_end_pos = set_end(dest_set);
     unsigned long int u_key;
-    char *src_str, *dest_str;
-    char **cur_src_pos;
+    char *src_str, *dest_str, **cur_src_pos;
 
-    for (i = set_begin(src_set), j = set_begin(dest_set); i < set_end(src_set) && j < set_end(dest_set);
+    for (i = set_begin(src_set), j = set_begin(dest_set); i < src_end_pos && j < dest_end_pos;
          i = set_next(i), j = set_next(j))
     {
         src_str  = *get_set_pos(src_set, i);
@@ -190,10 +178,19 @@ int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
         {
             u_key           = (unsigned int)*j;
             is_dupe         = is_duplicate_element(dest_str, src_set, &u_key);
-            char tmp_path[] = "mmv_cycle_XXXXXX";
+            char template[] = "_mmv_XXXXXX";
 
             if (is_dupe == 0)
             {
+                cur_src_pos             = get_set_pos(src_set, j);
+                char *tmp_path_parts[2] = {*cur_src_pos, template};
+                char *tmp_path          = strccat(tmp_path_parts, 2);
+                if (tmp_path == NULL)
+                {
+                    perror("mmv: failed to allocate memory for cycle-removal temporary path");
+                    return -1;
+                }
+
                 // create temporary name using the current name
                 int tmp_fd = mkstemp(tmp_path);
                 if (tmp_fd == -1)
@@ -202,14 +199,13 @@ int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
                     return -1;
                 }
 
-                cur_src_pos = get_set_pos(src_set, j);
-
                 // rename to temporary name
                 rename_path(*cur_src_pos, tmp_path, opts);
 
                 // update str in src map to temp_str
                 free(*cur_src_pos);
                 cpy_str_to_arr(cur_src_pos, tmp_path);
+                free(tmp_path);
             }
         }
     }

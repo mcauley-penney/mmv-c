@@ -14,5 +14,6 @@
  */
 char *cpy_str_to_arr(char **array_pos, const char *src_str);
 
+char *strccat(char **str_arr, unsigned int num_strs);
 
 #endif // UTILS_H
