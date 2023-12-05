@@ -30,19 +30,6 @@ static struct Opts *make_opts(void)
     return opts;
 }
 
-void test_rm_path(void)
-{
-    char *path = "MMV_TEST_FILE";
-    FILE *fptr = fopen(path, "w");
-    TEST_ASSERT_NOT_NULL(fptr);
-
-    fclose(fptr);
-    rm_path(path);
-
-    int exists = access(path, F_OK);
-    TEST_ASSERT(exists != 0);
-}
-
 void test_open_tmpfile_fptr_incorrect_path(void)
 {
     char path[] = "mmv_test";
@@ -57,7 +44,7 @@ void test_open_tmpfile_fptr_correct_path(void)
     FILE *fptr  = open_tmpfile_fptr(path);
 
     fclose(fptr);
-    rm_path(path);
+    remove(path);
 
     TEST_ASSERT_NOT_NULL(fptr);
 }
@@ -77,7 +64,7 @@ void test_rename_path(void)
     int exists = access(dest, F_OK);
 
     free(options);
-    rm_path(dest);
+    remove(dest);
 
     TEST_ASSERT_EQUAL_INT(0, exists);
 }
@@ -91,7 +78,7 @@ void test_write_strarr_to_tmpfile(void)
     struct Set *test_set = set_init(false, argc, empty_argv, false);
 
     int ret = write_strarr_to_tmpfile(test_set, correct_tmp_path);
-    rm_path(correct_tmp_path);
+    remove(correct_tmp_path);
     set_destroy(test_set);
     TEST_ASSERT(ret == 0);
 }
@@ -104,7 +91,7 @@ void test_edit_tmpfile(void)
 
     int ret = edit_tmpfile(path);
 
-    rm_path(path);
+    remove(path);
     TEST_ASSERT_EQUAL_INT(0, ret);
 }
 
@@ -125,12 +112,12 @@ void test_read_tmpfile_strs(void)
     if (read_tmpfile_strs(dest_arr, &dest_size, argc, tmp_path) != 0)
     {
         free_strarr(dest_arr, dest_size);
-        rm_path(tmp_path);
+        remove(tmp_path);
         set_destroy(test_set);
         TEST_FAIL();
     }
 
-    rm_path(tmp_path);
+    remove(tmp_path);
     TEST_ASSERT_EQUAL_STRING_ARRAY(argv, dest_arr, argc);
     free_strarr(dest_arr, dest_size);
     set_destroy(test_set);
@@ -158,7 +145,6 @@ void test_rm_cycles()
     src_str = *get_set_pos(src_set, i);
     TEST_ASSERT(strcmp(src_argv[1], src_str) != 0);
 
-    rm_path(src_str);
     free(options);
     set_destroy(src_set);
     set_destroy(dest_set);
@@ -168,7 +154,6 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_rm_path);                          // rm_path
     RUN_TEST(test_open_tmpfile_fptr_incorrect_path); // open_tmpfile_fptr
     RUN_TEST(test_open_tmpfile_fptr_correct_path);   // open_tmpfile_fptr
     RUN_TEST(test_rename_path);                      // rename_path

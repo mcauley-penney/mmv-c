@@ -86,12 +86,4 @@ int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *options
  */
 void rename_path(const char *src, const char *dest, struct Opts *options);
 
-/**
- * @brief deletes an item at the given path in the file system
- *
- * @param path: path to item to delete
- */
-void rm_path(char *path);
-
-
 int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *options);

@@ -1,5 +1,4 @@
 #include <getopt.h>
-#include <sys/stat.h>
 
 #include "src/mmv.h"
 
@@ -32,14 +31,6 @@ static void usage(void)
     printf("For full documentation, see man %s\n", PROG_NAME);
 }
 
-/**
- * @brief Print program help information
- */
-static void try_help(void)
-{
-    puts("Try 'mmv -h'for more information");
-}
-
 int main(int argc, char *argv[])
 {
     int cur_flag;
@@ -68,7 +59,7 @@ int main(int argc, char *argv[])
 
             default:
                 free(options);
-                try_help();
+                puts("Try 'mmv -h'for more information");
                 return EXIT_FAILURE;
         }
     }
@@ -101,7 +92,6 @@ int main(int argc, char *argv[])
     rm_path(tmp_path);
     set_destroy(src_set);
     free(options);
-
 
     return EXIT_SUCCESS;
 

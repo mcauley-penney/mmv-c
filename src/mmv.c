@@ -149,16 +149,15 @@ void rename_path(const char *src, const char *dest, struct Opts *opts)
         return;
 
     if (rename(src, dest) == -1)
+    {
         fprintf(stderr, "mmv: \'%s\' to \'%s\': %s\n", src, dest, strerror(errno));
 
-    else if (opts->verbose)
-        printf("  '%s' -> '%s'\n", src, dest);
-}
+        if (errno == 2)
+            remove(dest);
+    }
 
-void rm_path(char *path)
-{
-    if (remove(path) == -1)
-        fprintf(stderr, "mmv: failed to delete \'%s\': %s\n", path, strerror(errno));
+    else if (opts->verbose)
+        printf("  '%s' to '%s'\n", src, dest);
 }
 
 // TODO: modularize
