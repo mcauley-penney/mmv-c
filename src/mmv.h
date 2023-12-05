@@ -17,7 +17,7 @@
 
 
 #define PROG_NAME    "mmv"
-#define PROG_VERSION "version 0.3.0"
+#define PROG_VERSION "version 0.3.2"
 #define PROG_REMOTE  "https://github.com/mcauley-penney/mmv-c"
 
 struct Opts
