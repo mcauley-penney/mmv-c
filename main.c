@@ -71,15 +71,15 @@ int main(int argc, char *argv[])
     if (src_set == NULL)
         goto free_opts_out;
 
-    char tmp_path[] = "/tmp/mmv_XXXXXX";
+    char tmpfile[] = "/tmp/mmv_editbuf_XXXXXX";
 
-    if (write_strarr_to_tmpfile(src_set, tmp_path) != 0)
+    if (write_strarr_to_tmpfile(src_set, tmpfile) != 0)
         goto free_src_out;
 
-    if (edit_tmpfile(tmp_path) != 0)
+    if (edit_tmpfile(tmpfile) != 0)
         goto rm_path_out;
 
-    struct Set *dest_set = init_dest_set(src_set->num_keys, tmp_path);
+    struct Set *dest_set = init_dest_set(src_set->num_keys, tmpfile);
     if (dest_set == NULL)
         goto rm_path_out;
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     rename_paths(src_set, dest_set, options);
 
     set_destroy(dest_set);
-    rm_path(tmp_path);
+    remove(tmpfile);
     set_destroy(src_set);
     free(options);
 
@@ -100,7 +100,7 @@ free_dest_out:
     set_destroy(dest_set);
 
 rm_path_out:
-    rm_path(tmp_path);
+    remove(tmpfile);
 
 free_src_out:
     set_destroy(src_set);
