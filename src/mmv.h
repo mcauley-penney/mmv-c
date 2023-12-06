@@ -37,16 +37,6 @@ struct Opts
  */
 int write_strarr_to_tmpfile(struct Set *set, char tmp_path_template[]);
 
-
-/**
- * @brief opens the given path and returns its file pointer
- *
- * @param tmp_path: string, file path to open
- *
- * @return file pointer to opened path
- */
-FILE *open_tmpfile_fptr(char *tmp_path);
-
 /**
  * @brief gets the user's $EDITOR env variable and opens temp file with it
  *

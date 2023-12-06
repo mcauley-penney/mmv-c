@@ -30,25 +30,6 @@ static struct Opts *make_opts(void)
     return opts;
 }
 
-void test_open_tmpfile_fptr_incorrect_path(void)
-{
-    char path[] = "mmv_test";
-    FILE *fptr  = open_tmpfile_fptr(path);
-
-    TEST_ASSERT_NULL(fptr);
-}
-
-void test_open_tmpfile_fptr_correct_path(void)
-{
-    char path[] = "mmv_XXXXXX";
-    FILE *fptr  = open_tmpfile_fptr(path);
-
-    fclose(fptr);
-    remove(path);
-
-    TEST_ASSERT_NOT_NULL(fptr);
-}
-
 void test_rename_path(void)
 {
     struct Opts *options = make_opts();
@@ -86,7 +67,11 @@ void test_write_strarr_to_tmpfile(void)
 void test_edit_tmpfile(void)
 {
     char path[] = "mmv_XXXXXX";
-    FILE *fptr  = open_tmpfile_fptr(path);
+    int tmp_fd  = mkstemp(path);
+    if (tmp_fd == -1)
+        fprintf(stderr, "mmv: could not create temporary file \'%s\': %s\n", path, strerror(errno));
+
+    FILE *fptr = fdopen(tmp_fd, "w");
     fclose(fptr);
 
     int ret = edit_tmpfile(path);
@@ -131,11 +116,11 @@ void test_rm_cycles()
     char *src_str;
 
     int src_argc        = 2;
-    char *src_argv[]    = {"TEST STRING1", "TEST STRING2"};
+    char *src_argv[]    = {"TEST_STRING1", "TEST_STRING2"};
     struct Set *src_set = set_init(false, src_argc, src_argv, false);
 
     int dest_argc        = 2;
-    char *dest_argv[]    = {"TEST STRING2", "TEST STRING3"};
+    char *dest_argv[]    = {"TEST_STRING2", "TEST_STRING3"};
     struct Set *dest_set = set_init(false, dest_argc, dest_argv, false);
 
     rm_cycles(src_set, dest_set, options);
@@ -154,13 +139,11 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_open_tmpfile_fptr_incorrect_path); // open_tmpfile_fptr
-    RUN_TEST(test_open_tmpfile_fptr_correct_path);   // open_tmpfile_fptr
-    RUN_TEST(test_rename_path);                      // rename_path
-    RUN_TEST(test_write_strarr_to_tmpfile);          // write_strarr_to_tmpfile
-    RUN_TEST(test_edit_tmpfile);                     // edit_tmpfile
-    RUN_TEST(test_read_tmpfile_strs);                // read_tmpfile_strs
-    RUN_TEST(test_rm_cycles);                        // rm_cycles
+    RUN_TEST(test_rename_path);             // rename_path
+    RUN_TEST(test_write_strarr_to_tmpfile); // write_strarr_to_tmpfile
+    RUN_TEST(test_edit_tmpfile);            // edit_tmpfile
+    RUN_TEST(test_read_tmpfile_strs);       // read_tmpfile_strs
+    RUN_TEST(test_rm_cycles);               // rm_cycles
 
     return UNITY_END();
 }

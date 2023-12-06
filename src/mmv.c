@@ -1,15 +1,17 @@
 #include "./mmv.h"
 
-int write_strarr_to_tmpfile(struct Set *set, char tmp_path_template[])
+int write_strarr_to_tmpfile(struct Set *set, char tmpfile_template[])
 {
     int *i, *set_end_pos = set_end(set);
 
-    FILE *tmp_fptr = open_tmpfile_fptr(tmp_path_template);
-    if (tmp_fptr == NULL)
+    int tmp_fd = mkstemp(tmpfile_template);
+    if (tmp_fd == -1)
     {
-        fprintf(stderr, "mmv: failed to open \"%s\": %s\n", tmp_path_template, strerror(errno));
-        return errno;
+        fprintf(stderr, "mmv: could not create temporary file \'%s\': %s\n", tmpfile_template, strerror(errno));
+        return -1;
     }
+
+    FILE *tmp_fptr = fdopen(tmp_fd, "w");
 
     for (i = set_begin(set); i < set_end_pos; i = set_next(i))
         fprintf(tmp_fptr, "%s\n", *get_set_pos(set, i));
@@ -17,18 +19,6 @@ int write_strarr_to_tmpfile(struct Set *set, char tmp_path_template[])
     fclose(tmp_fptr);
 
     return 0;
-}
-
-FILE *open_tmpfile_fptr(char *tmp_path)
-{
-    int tmp_fd = mkstemp(tmp_path);
-    if (tmp_fd == -1)
-    {
-        perror("mmv: could not create a temporary file");
-        return NULL;
-    }
-
-    return fdopen(tmp_fd, "w");
 }
 
 int edit_tmpfile(char *path)
@@ -194,7 +184,7 @@ int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
                 int tmp_fd = mkstemp(tmp_path);
                 if (tmp_fd == -1)
                 {
-                    perror("mmv: could not create a temporary file");
+                    fprintf(stderr, "mmv: could not create temporary file \'%s\': %s\n", tmp_path, strerror(errno));
                     return -1;
                 }
 
