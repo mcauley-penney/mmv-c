@@ -125,9 +125,6 @@ int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 
         if (!is_invalid_key(j))
             rename_path(src_str, dest_str, opts);
-
-        else
-            fprintf(stderr, "mmv: duplicate dest found for src '%s'. No mv conducted.\n", src_str);
     }
 
     return 0;
@@ -135,9 +132,6 @@ int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 
 void rename_path(const char *src, const char *dest, struct Opts *opts)
 {
-    if (strcmp(src, dest) == 0)
-        return;
-
     if (rename(src, dest) == -1)
     {
         fprintf(stderr, "mmv: \'%s\' to \'%s\': %s\n", src, dest, strerror(errno));
@@ -150,12 +144,10 @@ void rename_path(const char *src, const char *dest, struct Opts *opts)
         printf("  '%s' to '%s'\n", src, dest);
 }
 
-// TODO: modularize
-int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
+int rm_unedited_pairs(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
 {
-    int is_dupe, *i, *j, *src_end_pos = set_end(src_set), *dest_end_pos = set_end(dest_set);
-    unsigned long int u_key;
-    char *src_str, *dest_str, **cur_src_pos;
+    char *src_str, *dest_str;
+    int *i, *j, *src_end_pos = set_end(src_set), *dest_end_pos = set_end(dest_set);
 
     for (i = set_begin(src_set), j = set_begin(dest_set); i < src_end_pos && j < dest_end_pos;
          i = set_next(i), j = set_next(j))
@@ -163,17 +155,40 @@ int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
         src_str  = *get_set_pos(src_set, i);
         dest_str = *get_set_pos(dest_set, j);
 
-        if (!is_invalid_key(j) && strcmp(src_str, dest_str) != 0)
+        if (strcmp(src_str, dest_str) == 0)
         {
-            u_key           = (unsigned int)*j;
-            is_dupe         = is_duplicate_element(dest_str, src_set, &u_key);
-            char template[] = "_mmv_XXXXXX";
+            set_key(j, -1);
+
+            if (opts->verbose)
+                printf("  '%s' was not edited. No mv will be conducted.\n", src_str);
+        }
+    }
+
+    return 0;
+}
+
+int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
+{
+    int is_dupe, *i, *j, *src_end_pos = set_end(src_set), *dest_end_pos = set_end(dest_set);
+    unsigned long int u_key;
+    char *dest_str, *tmp_path, **cur_src_pos;
+
+    for (i = set_begin(src_set), j = set_begin(dest_set); i < src_end_pos && j < dest_end_pos;
+         i = set_next(i), j = set_next(j))
+    {
+        if (!is_invalid_key(j))
+        {
+            dest_str = *get_set_pos(dest_set, j);
+            u_key    = (unsigned int)*j;
+            is_dupe  = is_duplicate_element(dest_str, src_set, &u_key);
 
             if (is_dupe == 0)
             {
                 cur_src_pos             = get_set_pos(src_set, j);
+                char template[]         = "_mmv_XXXXXX";
                 char *tmp_path_parts[2] = {*cur_src_pos, template};
-                char *tmp_path          = strccat(tmp_path_parts, 2);
+
+                tmp_path = strccat(tmp_path_parts, 2);
                 if (tmp_path == NULL)
                 {
                     perror("mmv: failed to allocate memory for cycle-removal temporary path");

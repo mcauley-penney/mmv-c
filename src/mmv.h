@@ -76,4 +76,6 @@ int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *options
  */
 void rename_path(const char *src, const char *dest, struct Opts *options);
 
+int rm_unedited_pairs(struct Set *src_set, struct Set *dest_set, struct Opts *opts);
+
 int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *options);

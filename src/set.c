@@ -186,3 +186,8 @@ int is_invalid_key(const int *iter)
 {
     return *iter == -1;
 }
+
+int set_key(int *iter, int new_key)
+{
+    return *iter = new_key;
+}

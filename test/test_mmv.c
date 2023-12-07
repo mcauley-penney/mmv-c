@@ -108,7 +108,53 @@ void test_read_tmpfile_strs(void)
     set_destroy(test_set);
 }
 
-void test_rm_cycles()
+void test_rm_unedited_pairs_no_matches(void)
+{
+    int *i;
+
+    struct Opts *options = make_opts();
+
+    // 1. create two sets
+    int src_argc        = 2;
+    char *src_argv[]    = {"TEST_STRING1", "TEST_STRING2"};
+    struct Set *src_set = set_init(false, src_argc, src_argv, false);
+
+    int dest_argc        = 2;
+    char *dest_argv[]    = {"TEST_STRING2", "TEST_STRING3"};
+    struct Set *dest_set = set_init(false, dest_argc, dest_argv, false);
+
+    // 2. subject them to rm_unedited_pairs()
+    rm_unedited_pairs(src_set, dest_set, options);
+
+    // 3. check their keys
+    for (i = set_begin(dest_set); i < set_end(dest_set) - 1; i = set_next(i))
+        TEST_ASSERT(*i != -1);
+}
+
+void test_rm_unedited_pairs_matches(void)
+{
+    int *i;
+
+    struct Opts *options = make_opts();
+
+    // 1. create two sets
+    int src_argc        = 2;
+    char *src_argv[]    = {"TEST_STRING1", "TEST_STRING2"};
+    struct Set *src_set = set_init(false, src_argc, src_argv, false);
+
+    int dest_argc        = 2;
+    char *dest_argv[]    = {"TEST_STRING1", "TEST_STRING3"};
+    struct Set *dest_set = set_init(false, dest_argc, dest_argv, false);
+
+    // 2. subject them to rm_unedited_pairs()
+    rm_unedited_pairs(src_set, dest_set, options);
+
+    // 3. check their keys
+    i = set_begin(dest_set);
+    TEST_ASSERT_EQUAL_INT(-1, *i);
+}
+
+void test_rm_cycles(void)
 {
     struct Opts *options = make_opts();
 
@@ -139,11 +185,13 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_rename_path);             // rename_path
-    RUN_TEST(test_write_strarr_to_tmpfile); // write_strarr_to_tmpfile
-    RUN_TEST(test_edit_tmpfile);            // edit_tmpfile
-    RUN_TEST(test_read_tmpfile_strs);       // read_tmpfile_strs
-    RUN_TEST(test_rm_cycles);               // rm_cycles
+    RUN_TEST(test_rename_path);                  // rename_path
+    RUN_TEST(test_write_strarr_to_tmpfile);      // write_strarr_to_tmpfile
+    RUN_TEST(test_edit_tmpfile);                 // edit_tmpfile
+    RUN_TEST(test_read_tmpfile_strs);            // read_tmpfile_strs
+    RUN_TEST(test_rm_unedited_pairs_no_matches); // rm_unedited_pairs
+    RUN_TEST(test_rm_unedited_pairs_matches);    // rm_unedited_pairs
+    RUN_TEST(test_rm_cycles);                    // rm_cycles
 
     return UNITY_END();
 }
