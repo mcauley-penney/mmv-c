@@ -1,4 +1,4 @@
-name: Update man pages
+name: docs
 on:
   push:
     paths:
@@ -10,7 +10,7 @@ on:
       - "man/mmv.1.md"
 
 jobs:
-  docs:
+  update_man_page:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

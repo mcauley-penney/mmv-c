@@ -1,8 +1,9 @@
-name: Run Unit Tests
+name: test
 
 on:
   push:
     paths:
+      - ".github/workflows/*"
       - "Makefile"
       - "src/**"
       - "main.c"
@@ -12,13 +13,14 @@ on:
     branches:
       - "main"
     paths:
+      - ".github/workflows/*"
       - "Makefile"
       - "src/**"
       - "main.c"
       - "test/**"
 
 jobs:
-  build:
+  run_unit_tests:
     runs-on: ubuntu-latest
     steps:
       - name: Clone mmv

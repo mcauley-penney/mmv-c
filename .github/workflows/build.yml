@@ -1,8 +1,9 @@
-name: Build and Exercise
+name: compile_and_memcheck
 
 on:
   push:
     paths:
+      - ".github/workflows/*"
       - "Makefile"
       - "src/**"
       - "main.c"
@@ -11,12 +12,13 @@ on:
     branches:
       - "main"
     paths:
+      - ".github/workflows/*"
       - "Makefile"
       - "src/**"
       - "main.c"
 
 jobs:
-  Build:
+  build_executable:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -39,14 +41,17 @@ jobs:
       - name: Clean up debug build
         run: make debug_clean
 
-  Run_Valgrind:
-    needs: build
+  run_valgrind:
+    needs: build_executable
     runs-on: ubuntu-latest
     env:
       test_files_dir: test_dir
       utils: .github/utils
     steps:
       - uses: actions/checkout@v3
+
+      - name: Update packages
+        run: sudo apt update
 
       - name: Install dependencies
         run: sudo apt-get -y install valgrind
