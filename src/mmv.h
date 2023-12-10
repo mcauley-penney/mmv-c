@@ -26,6 +26,8 @@ struct Opts
     bool verbose;
 };
 
+struct Set *init_src_set(const int arg_count, char *args[], struct Opts *options);
+
 /**
  * @brief opens temp file at path, writes source strings (old names)
  *      to it, and closes said temp file

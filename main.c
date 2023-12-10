@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     argv += optind;
     argc -= optind;
 
-    struct Set *src_set = set_init(options->resolve_paths, argc, argv, false);
+    struct Set *src_set = init_src_set(argc, argv, options);
     if (src_set == NULL)
         goto free_opts_out;
 

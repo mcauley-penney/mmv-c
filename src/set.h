@@ -52,7 +52,7 @@ int *set_end(struct Set *set);
 
 char **get_set_pos(const struct Set *set, const int *iter);
 
-int is_invalid_key(const int *iter);
+int is_valid_key(const int *iter);
 
 int set_key(int *iter, int new_key);
 

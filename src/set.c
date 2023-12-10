@@ -182,9 +182,9 @@ char **get_set_pos(const struct Set *set, const int *iter)
     return &(set->map[*iter]);
 }
 
-int is_invalid_key(const int *iter)
+int is_valid_key(const int *iter)
 {
-    return *iter == -1;
+    return *iter != -1;
 }
 
 int set_key(int *iter, int new_key)
