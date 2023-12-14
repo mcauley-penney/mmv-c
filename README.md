@@ -6,13 +6,18 @@ Edit file and directory names in `$EDITOR`. Inspired by [itchyny/mmv](https://gi
 
 ## usage
 
-- `mmv` will open the arguments you pass it, files or directories, in a temporary buffer where you can give new names
+mmv behaves like other commandline tools: it accepts a list of arguments, including patterns like wildcards. See `man mmv` for options.
 
-![mmv-basic](https://github.com/mcauley-penney/mmv-c/assets/59481467/23b24fe1-e62e-48ea-9676-906cc1bbd745)
+## example
 
-- It will also handle cyclical renames, should the desire arise
+![mmv](https://github.com/mcauley-penney/mmv-c/assets/59481467/ecf97305-7847-4878-9ee7-5a86a287634e)
 
-![mmv-cycle](https://github.com/mcauley-penney/mmv-c/assets/59481467/010fef24-fbb2-4e73-9e73-ab7fb62216a9)
+In the above example, mmv is provided the `verbose` argument so that it will list what renames it conducts and three wildcard arguments that are duplicates of each other: 
+1. the set of files in the current directory that begin with `test`
+2. the same set of files as before
+3. the same set of files again, except using an alternate path string
+
+mmv is capable of removing duplicate arguments even when the input strings don't match, for example `test0.txt` and `~/test_dir/test0.txt`. In the editing buffer, we see only one instance of each unique file, though three were given for each. When cycles between renames are detected, for example renaming `test0.txt` to `test1.txt` even though that destination already exists, mmv will remove the cycles by conducting intermediate renames on only those files which are detected as cycles, i.e. it avoids renaming everything when a cycle is detected. These intermediate rename operations are visible in the verbose output. cat is used here to display that the contents of the files remains the same.
 
 ## installation
 
@@ -23,12 +28,12 @@ Edit file and directory names in `$EDITOR`. Inspired by [itchyny/mmv](https://gi
 In all:
 
 ```
-git clone https://github.com/mcauley-penney/mmv-c.git
-cd mmv-c
-make
-sudo make install
-cd ..
-sudo rm -r mmv-c
+$ git clone https://github.com/mcauley-penney/mmv-c.git
+$ cd mmv-c
+$ make
+$ sudo make install
+$ cd ..
+$ sudo rm -r mmv-c
 ```
 
 ## credit
