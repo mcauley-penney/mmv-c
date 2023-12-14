@@ -14,7 +14,8 @@ int write_strarr_to_tmpfile(struct Set *set, char tmpfile_template[])
     FILE *tmp_fptr = fdopen(tmp_fd, "w");
 
     for (i = set_begin(set); i < set_end_pos; i = set_next(i))
-        fprintf(tmp_fptr, "%s\n", *get_set_pos(set, i));
+        if (is_valid_key(i))
+            fprintf(tmp_fptr, "%s\n", *get_set_pos(set, i));
 
     fclose(tmp_fptr);
 
@@ -47,6 +48,59 @@ int edit_tmpfile(char *path)
     free(edit_cmd);
 
     return 0;
+}
+
+struct Set *init_src_set(const int num_keys, char *argv[], struct Opts *options)
+{
+    // prepare for duplicate removal by creating array of absolute paths from commandline args
+    char **realpath_argv = malloc(sizeof(char *) * (unsigned int)num_keys);
+    if (realpath_argv == NULL)
+    {
+        perror("mmv: failed to allocate memory for absolute path array");
+        return NULL;
+    }
+
+    for (int i = 0; i < num_keys; i++)
+        if (cpy_str_to_arr(&realpath_argv[i], realpath(argv[i], NULL)) == NULL)
+        {
+            free(realpath_argv);
+            return NULL;
+        }
+
+    // turn array of absolute paths into a set to rm duplicates
+    struct Set *realpath_set = set_init(options->resolve_paths, num_keys, realpath_argv, true);
+
+    if (realpath_set == NULL)
+    {
+        free(realpath_argv);
+        return NULL;
+    }
+
+    struct Set *src_set = realpath_set;
+
+    // if not using the resolve paths opt, give the original arg
+    // strings, those used on the commandline, back to the user.
+    if (!options->resolve_paths)
+    {
+        int *key, *set_end_pos = set_end(realpath_set), key_num = 0;
+        for (key = set_begin(realpath_set); key < set_end_pos; key = set_next(key))
+            if (is_valid_key(key))
+            {
+                if (cpy_str_to_arr(&realpath_argv[key_num], argv[key_num]) == NULL)
+                {
+                    free(src_set);
+                    return NULL;
+                }
+
+                key_num++;
+            }
+
+        src_set = set_init(false, key_num, realpath_argv, false);
+    }
+
+    free(realpath_argv);
+
+    return src_set;
 }
 
 struct Set *init_dest_set(unsigned int num_keys, char path[])
@@ -123,7 +177,7 @@ int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
         src_str  = *get_set_pos(src_set, i);
         dest_str = *get_set_pos(dest_set, j);
 
-        if (!is_invalid_key(j))
+        if (is_valid_key(j))
             rename_path(src_str, dest_str, opts);
     }
 
@@ -176,7 +230,7 @@ int rm_cycles(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
     for (i = set_begin(src_set), j = set_begin(dest_set); i < src_end_pos && j < dest_end_pos;
          i = set_next(i), j = set_next(j))
     {
-        if (!is_invalid_key(j))
+        if (is_valid_key(j))
         {
             dest_str = *get_set_pos(dest_set, j);
             u_key    = (unsigned int)*j;

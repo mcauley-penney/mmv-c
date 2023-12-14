@@ -147,7 +147,7 @@ void test_set_init_onedupe_track(void)
     test_set = set_init(false, argc, dupe_argv, true);
     i        = set_begin(test_set);
     i        = set_next(i);
-    TEST_ASSERT_TRUE(is_invalid_key(i));
+    TEST_ASSERT_FALSE(is_valid_key(i));
     set_destroy(test_set);
 }
 
