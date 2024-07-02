@@ -1,4 +1,4 @@
-#include "./set.h"
+#include "set.h"
 
 /**
  * @brief Allocate memory for members of a Set struct

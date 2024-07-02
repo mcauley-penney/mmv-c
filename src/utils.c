@@ -1,4 +1,4 @@
-#include "./utils.h"
+#include "utils.h"
 
 char *cpy_str_to_arr(char **arr_dest, const char *src_str)
 {

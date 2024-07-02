@@ -1,4 +1,4 @@
-#include "./mmv.h"
+#include "mmv.h"
 
 int write_strarr_to_tmpfile(struct Set *set, char tmpfile_template[])
 {

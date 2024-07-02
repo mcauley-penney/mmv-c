@@ -6,11 +6,11 @@ project(${NAME}-c C)
 
 set(SRCDIR ${CMAKE_SOURCE_DIR}/src)
 
-include_directories(${SRCDIR})
+include_directories(./includes/)
 
 file(GLOB SRCS ${SRCDIR}/*.c)
 
-add_executable(${NAME} ${CMAKE_SOURCE_DIR}/main.c ${SRCS})
+add_executable(${NAME} ${SRCS})
 
 
 option(TESTING "Enable tests executables" OFF)

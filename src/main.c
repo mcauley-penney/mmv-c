@@ -1,6 +1,6 @@
 #include <getopt.h>
 
-#include "src/mmv.h"
+#include "mmv.h"
 
 /**
  * @brief Create struct of possible user flags
