@@ -22,18 +22,36 @@ mmv is capable of removing duplicate arguments even when the input strings don't
 ## installation
 
 1. Clone this repository and enter the repo directory
-2. Issue `make`, then `sudo make install`
-3. Feel free to remove the cloned repo
 
-In all:
+```sh
+ $ git clone https://github.com/mcauley-penney/mmv-c.git
+ $ cd mmv-c
+```
+
+2. Generate build file and run build
+
+```sh
+ $ cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
+ $ cmake --build ./build
+```
+
+3. Install
+
+```sh
+$ sudo cmake --install ./build
+```
+
+Or if you want to change prefix use `--prefix=<path(/usr, /usr/local, $HOME/.local)>` option.
+
+4. Feel free to remove the cloned repo
+
+```sh
+ $ cd ..
+ $ rm -rf mmv-c
+```
 
 ```
-$ git clone https://github.com/mcauley-penney/mmv-c.git
-$ cd mmv-c
-$ make
-$ sudo make install
-$ cd ..
-$ sudo rm -r mmv-c
+$ sudo cmake --install ./build
 ```
 
 ## credit
