@@ -4,9 +4,9 @@ on:
   push:
     paths:
       - ".github/workflows/*"
-      - "Makefile"
+      - "CMakeLists.txt"
+      - "includes/**"
       - "src/**"
-      - "main.c"
       - "test/**"
 
   pull_request:
@@ -14,9 +14,9 @@ on:
       - "main"
     paths:
       - ".github/workflows/*"
-      - "Makefile"
+      - "CMakeLists.txt"
+      - "includes/**"
       - "src/**"
-      - "main.c"
       - "test/**"
 
 jobs:
@@ -26,17 +26,8 @@ jobs:
       - name: Clone mmv
         uses: actions/checkout@v3
 
-      - name: Clone test framework
-        uses: actions/checkout@v3
-        with:
-          repository: ThrowTheSwitch/Unity
-          path: Unity
-
-      - name: Set up directory
-        run: mv ./Unity/src/* test
-
       - name: Build test executables
-        run: make test
+        run: cmake -Bbuild -DTESTING=ON && cmake --build ./build
 
       - name: Clean up test executable
-        run: make test_clean
+        run: rm -rf ./build/*
