@@ -18,7 +18,7 @@ option(TESTING "Enable tests executables" OFF)
 if(TESTING)
 		message(STATUS "Enable testing")
 		enable_testing()
-		add_subdirectory(libs/Unity)
+		add_subdirectory(libs/Unity EXCLUDE_FROM_ALL)
 		add_subdirectory(test)
 endif()
 
