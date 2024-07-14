@@ -24,9 +24,11 @@ mmv is capable of removing duplicate arguments even when the input strings don't
 1. Clone this repository and enter the repo directory
 
 ```sh
- $ git clone https://github.com/mcauley-penney/mmv-c.git
+ $ git clone https://github.com/mcauley-penney/mmv-c.git --recurse-submodules
  $ cd mmv-c
 ```
+
+If you do not plan to run tests, then `--recurse-submodules` can be removed.
 
 2. Generate build file and run build
 
