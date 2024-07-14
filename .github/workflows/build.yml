@@ -63,4 +63,4 @@ jobs:
         run: cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug && cmake --build ./build/
 
       - name: Execute Valgrind
-        run: valgrind --leak-check=full --track-origins=yes --show-leak-kinds=all -s ./debug_mmv "$test_files_dir"/test*
+        run: valgrind --leak-check=full --track-origins=yes --show-leak-kinds=all -s ./build/mmv "$test_files_dir"/test*
