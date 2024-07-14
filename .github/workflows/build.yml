@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true  # Зазначте, що потрібно клонувати підмодулі
 
       - name: Build primary executable
         run: cmake -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build ./build/
