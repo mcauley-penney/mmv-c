@@ -34,8 +34,8 @@ jobs:
       - name: Exercise uninstall
         run: sudo rm $(cat build/install_manifest.txt) build/install_manifest.txt
 
-        #- name: Clean up primary build
-        #run: make clean
+      - name: Clean up primary build
+        run: rm -rf ./build/
 
       - name: Build debug executable
         run: cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug && cmake --build ./build/
