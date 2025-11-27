@@ -190,11 +190,12 @@ int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
     for (i = set_begin(src_set), j = set_begin(dest_set); i < set_end(src_set) && j < set_end(dest_set);
          i = set_next(i), j = set_next(j))
     {
-        src_str  = *get_set_pos(src_set, i);
-        dest_str = *get_set_pos(dest_set, j);
-
         if (is_valid_key(j))
+        {
+            src_str  = *get_set_pos(src_set, i);
+            dest_str = *get_set_pos(dest_set, j);
             rename_path(src_str, dest_str, opts);
+        }
     }
 
     return 0;
