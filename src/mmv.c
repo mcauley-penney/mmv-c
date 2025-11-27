@@ -60,12 +60,28 @@ struct Set *init_src_set(const int num_keys, char *argv[], struct Opts *options)
         return NULL;
     }
 
-    for (int i = 0; i < num_keys; i++)
-        if (cpy_str_to_arr(&realpath_argv[i], realpath(argv[i], NULL)) == NULL)
-        {
+    for (int i = 0; i < num_keys; i++) {
+        char* path = realpath(argv[i],NULL);
+        if (path == NULL) {
+            fprintf(stderr,"mmv: error opening '%s': ",argv[i]);
+            perror(NULL);
+            for (int j = 0; j < i; j++)
+              free(realpath_argv[j]);
+
             free(realpath_argv);
             return NULL;
         }
+        if (cpy_str_to_arr(&realpath_argv[i], path) == NULL)
+        {
+            free(path);
+            for (int j = 0; j < i; j++)
+              free(realpath_argv[j]);
+
+            free(realpath_argv);
+            return NULL;
+        }
+        free(path);
+    }
 
     // turn array of absolute paths into a set to rm duplicates
     struct Set *realpath_set = set_init(options->resolve_paths, num_keys, realpath_argv, true);
