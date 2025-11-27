@@ -148,9 +148,12 @@ struct Set *set_init(bool resolve_paths, const int arg_count, char *args[], bool
         {
             set_destroy(set);
             fprintf(stderr, "mmv: failed to insert \'%s\': %s\n", cur_str, strerror(errno));
-            free(cur_str);
+            if (resolve_paths)
+                free(cur_str);
             return NULL;
         }
+        if (resolve_paths)
+            free(cur_str);
     }
 
     return set;

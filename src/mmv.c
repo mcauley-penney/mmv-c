@@ -65,19 +65,13 @@ struct Set *init_src_set(const int num_keys, char *argv[], struct Opts *options)
         if (path == NULL) {
             fprintf(stderr,"mmv: error opening '%s': ",argv[i]);
             perror(NULL);
-            for (int j = 0; j < i; j++)
-              free(realpath_argv[j]);
-
-            free(realpath_argv);
+            free_strarr(realpath_argv,i);
             return NULL;
         }
         if (cpy_str_to_arr(&realpath_argv[i], path) == NULL)
         {
             free(path);
-            for (int j = 0; j < i; j++)
-              free(realpath_argv[j]);
-
-            free(realpath_argv);
+            free_strarr(realpath_argv,i);
             return NULL;
         }
         free(path);
@@ -88,7 +82,7 @@ struct Set *init_src_set(const int num_keys, char *argv[], struct Opts *options)
 
     if (realpath_set == NULL)
     {
-        free(realpath_argv);
+        free_strarr(realpath_argv,num_keys);
         return NULL;
     }
 
@@ -102,19 +96,22 @@ struct Set *init_src_set(const int num_keys, char *argv[], struct Opts *options)
         for (key = set_begin(realpath_set); key < set_end_pos; key = set_next(key))
             if (is_valid_key(key))
             {
+                free(realpath_argv[key_num]);
                 if (cpy_str_to_arr(&realpath_argv[key_num], argv[key_num]) == NULL)
                 {
-                    free(src_set);
+                    free_strarr(realpath_argv,num_keys);
+                    set_destroy(src_set);
                     return NULL;
                 }
 
                 key_num++;
             }
 
+        set_destroy(realpath_set);
         src_set = set_init(false, key_num, realpath_argv, false);
     }
 
-    free(realpath_argv);
+    free_strarr(realpath_argv,num_keys);
 
     return src_set;
 }
@@ -135,7 +132,13 @@ struct Set *init_dest_set(unsigned int num_keys, char path[])
         return NULL;
     }
 
+    // setting this to true causes no leak, leak can be found with valgrind
     struct Set *set = set_init(false, dest_size, dest_arr, true);
+    if (set == NULL) {
+            free_strarr(dest_arr, dest_size);
+            fprintf(stderr,"mmv: failed init_dest_set\n");
+            return NULL;
+    }
 
     free_strarr(dest_arr, dest_size);
 
