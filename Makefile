@@ -59,7 +59,7 @@ test:
 
 
 debug:
-	$(CC) $(CFLAGS) -D DEBUG=1 main.c $(src_files) -o debug_$(bin_name)
+	$(CC) $(CFLAGS) -g -fsanitize=address,undefined -D DEBUG=1 main.c $(src_files) -o debug_$(bin_name)
 
 
 # clean target: remove all object files and binary
