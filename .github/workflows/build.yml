@@ -4,42 +4,44 @@ on:
   push:
     paths:
       - ".github/workflows/*"
-      - "Makefile"
+      - "CMakeLists.txt"
+      - "includes/**"
       - "src/**"
-      - "main.c"
 
   pull_request:
     branches:
       - "main"
     paths:
       - ".github/workflows/*"
-      - "Makefile"
+      - "CMakeLists.txt"
+      - "includes/**"
       - "src/**"
-      - "main.c"
 
 jobs:
   build_executable:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true  # Зазначте, що потрібно клонувати підмодулі
 
       - name: Build primary executable
-        run: make
+        run: cmake -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build ./build/
 
       - name: Exercise install
-        run: sudo make install
+        run: sudo cmake --install ./build/
 
       - name: Exercise uninstall
-        run: sudo make uninstall
+        run: sudo rm $(cat build/install_manifest.txt) build/install_manifest.txt
 
       - name: Clean up primary build
-        run: make clean
+        run: rm -rf ./build/
 
       - name: Build debug executable
-        run: make debug
+        run: cmake -Bdebug_build -DCMAKE_BUILD_TYPE=Debug && cmake --build ./debug_build
 
       - name: Clean up debug build
-        run: make debug_clean
+        run: rm -rf ./debug_build/
 
   run_valgrind:
     needs: build_executable
@@ -60,7 +62,7 @@ jobs:
         run: sh "$utils"/init_files.sh "$test_files_dir" 10
 
       - name: Build debug executable
-        run: make debug
+        run: cmake -Bbuild -DCMAKE_BUILD_TYPE=Debug && cmake --build ./build/
 
       - name: Execute Valgrind
-        run: valgrind --leak-check=full --track-origins=yes --show-leak-kinds=all -s ./debug_mmv "$test_files_dir"/test*
+        run: valgrind --leak-check=full --track-origins=yes --show-leak-kinds=all -s ./build/mmv "$test_files_dir"/test*
