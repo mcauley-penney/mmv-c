@@ -3,7 +3,7 @@
 char *cpy_str_to_arr(char **arr_dest, const char *src_str)
 {
     *arr_dest = malloc((strlen(src_str) + 1) * sizeof(char));
-    if (arr_dest == NULL)
+    if (*arr_dest == NULL)
     {
         perror("mmv: failed to allocate memory for new map str\n");
         return NULL;
@@ -20,6 +20,10 @@ char *strccat(char **str_arr, unsigned int num_strs)
     unsigned int i;
     size_t size      = 4200 * sizeof(char);
     char *concat_str = malloc(size);
+    if (concat_str == NULL) {
+      perror("mmv: couldn't allocate concat str");
+      return NULL;
+		}
 
     char *p = memccpy(concat_str, str_arr[0], '\0', size - 1);
 

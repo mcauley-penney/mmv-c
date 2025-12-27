@@ -60,19 +60,29 @@ struct Set *init_src_set(const int num_keys, char *argv[], struct Opts *options)
         return NULL;
     }
 
-    for (int i = 0; i < num_keys; i++)
-        if (cpy_str_to_arr(&realpath_argv[i], realpath(argv[i], NULL)) == NULL)
-        {
-            free(realpath_argv);
+    for (int i = 0; i < num_keys; i++) {
+        char* path = realpath(argv[i],NULL);
+        if (path == NULL) {
+            fprintf(stderr,"mmv: error opening '%s': ",argv[i]);
+            perror(NULL);
+            free_strarr(realpath_argv,i);
             return NULL;
         }
+        if (cpy_str_to_arr(&realpath_argv[i], path) == NULL)
+        {
+            free(path);
+            free_strarr(realpath_argv,i);
+            return NULL;
+        }
+        free(path);
+    }
 
     // turn array of absolute paths into a set to rm duplicates
     struct Set *realpath_set = set_init(options->resolve_paths, num_keys, realpath_argv, true);
 
     if (realpath_set == NULL)
     {
-        free(realpath_argv);
+        free_strarr(realpath_argv,num_keys);
         return NULL;
     }
 
@@ -86,19 +96,22 @@ struct Set *init_src_set(const int num_keys, char *argv[], struct Opts *options)
         for (key = set_begin(realpath_set); key < set_end_pos; key = set_next(key))
             if (is_valid_key(key))
             {
+                free(realpath_argv[key_num]);
                 if (cpy_str_to_arr(&realpath_argv[key_num], argv[key_num]) == NULL)
                 {
-                    free(src_set);
+                    free_strarr(realpath_argv,num_keys);
+                    set_destroy(src_set);
                     return NULL;
                 }
 
                 key_num++;
             }
 
+        set_destroy(realpath_set);
         src_set = set_init(false, key_num, realpath_argv, false);
     }
 
-    free(realpath_argv);
+    free_strarr(realpath_argv,num_keys);
 
     return src_set;
 }
@@ -119,7 +132,13 @@ struct Set *init_dest_set(unsigned int num_keys, char path[])
         return NULL;
     }
 
+    // setting this to true causes no leak, leak can be found with valgrind
     struct Set *set = set_init(false, dest_size, dest_arr, true);
+    if (set == NULL) {
+            free_strarr(dest_arr, dest_size);
+            fprintf(stderr,"mmv: failed init_dest_set\n");
+            return NULL;
+    }
 
     free_strarr(dest_arr, dest_size);
 
@@ -174,11 +193,12 @@ int rename_paths(struct Set *src_set, struct Set *dest_set, struct Opts *opts)
     for (i = set_begin(src_set), j = set_begin(dest_set); i < set_end(src_set) && j < set_end(dest_set);
          i = set_next(i), j = set_next(j))
     {
-        src_str  = *get_set_pos(src_set, i);
-        dest_str = *get_set_pos(dest_set, j);
-
         if (is_valid_key(j))
+        {
+            src_str  = *get_set_pos(src_set, i);
+            dest_str = *get_set_pos(dest_set, j);
             rename_path(src_str, dest_str, opts);
+        }
     }
 
     return 0;

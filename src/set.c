@@ -66,6 +66,11 @@ static int set_insert(char *cur_str, struct Set *set, bool track_dupes)
     long unsigned int hash = hash_str(cur_str, set->map_capacity);
     int is_dupe            = is_duplicate_element(cur_str, set, &hash);
 
+    if (set->num_keys >= set->map_capacity) {
+      fprintf(stderr, "mmv: set capacity reached, cannot insert '%s'\n", cur_str);
+      return -1;
+    }
+
     if (is_dupe == 0)
     {
         if (track_dupes)
@@ -133,13 +138,22 @@ struct Set *set_init(bool resolve_paths, const int arg_count, char *args[], bool
         cur_str = args[i];
         if (resolve_paths)
             cur_str = realpath(cur_str, NULL);
+        if (cur_str == NULL) {
+            set_destroy(set);
+            fprintf(stderr,"mmv: error opening '%s': %s\n", args[i], strerror(errno));
+            return NULL;
+        }
 
         if (set_insert(cur_str, set, track_dupes) == -1)
         {
             set_destroy(set);
             fprintf(stderr, "mmv: failed to insert \'%s\': %s\n", cur_str, strerror(errno));
+            if (resolve_paths)
+                free(cur_str);
             return NULL;
         }
+        if (resolve_paths)
+            free(cur_str);
     }
 
     return set;
